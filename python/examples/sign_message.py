@@ -32,10 +32,12 @@ async def main() -> int:
         return 2
 
     message = sys.argv[1]
-    encoding = sys.argv[2] if len(sys.argv) >= 3 else "utf8"
-    if encoding not in ("utf8", "hex"):
+    parse_as = sys.argv[2] if len(sys.argv) >= 3 else "utf8"
+    if parse_as not in ("utf8", "hex"):
         usage()
         return 2
+
+    message_bytes = bytes.fromhex(message) if parse_as == "hex" else message.encode("utf-8")
 
     provider = TronProvider(
         private_key=os.getenv("TRON_PRIVATE_KEY"),
@@ -45,7 +47,7 @@ async def main() -> int:
     )
     await provider.init()
 
-    sig = await provider.sign_message(message, encoding=encoding)
+    sig = await provider.sign_message(message_bytes)
     print(sig)
     return 0
 

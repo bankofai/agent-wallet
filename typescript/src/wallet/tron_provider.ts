@@ -16,6 +16,11 @@ export interface TronProviderOptions {
   keystore?: KeystoreOptions | KeystoreBase;
 }
 
+export interface MessageSignRequest {
+  type: "message";
+  message: Uint8Array;
+}
+
 export class TronProvider extends BaseProvider {
   protected tronWeb: any;
   protected address: string | null = null;
@@ -117,12 +122,48 @@ export class TronProvider extends BaseProvider {
   }
 
   async signTx(unsignedTx: unknown): Promise<SignedTxResult> {
+    // Message-signing mode (non-transaction payload)
+    if (this.isMessageSignRequest(unsignedTx)) {
+      const signature = await this.signMessage(unsignedTx.message);
+      return {
+        signedTx: { type: "message", message: unsignedTx.message },
+        signature,
+      };
+    }
+
     const signed = await this.sign(unsignedTx as any);
     const sig = (signed as any)?.signature?.[0];
     return {
       signedTx: signed,
       signature: typeof sig === "string" ? sig : undefined,
     };
+  }
+
+  async signMessage(message: Uint8Array): Promise<string> {
+    if (!this._privateKey) throw new Error("Private key not provided for signing");
+
+    // tronweb's signMessageV2 accepts string | Uint8Array | number[]
+    const fn =
+      (this.tronWeb?.trx as any)?.signMessageV2 ??
+      (this.tronWeb?.trx as any)?.signMessage;
+
+    if (typeof fn !== "function") {
+      throw new Error(
+        "TronWeb does not support message signing (missing trx.signMessageV2/signMessage)",
+      );
+    }
+
+    const sig = await Promise.resolve(fn.call(this.tronWeb.trx, message, this._privateKey));
+    if (typeof sig !== "string" || !sig) {
+      throw new Error("Message signing failed: empty signature");
+    }
+    return sig;
+  }
+
+  protected isMessageSignRequest(v: unknown): v is MessageSignRequest {
+    if (!v || typeof v !== "object") return false;
+    const anyV = v as any;
+    return anyV.type === "message" && anyV.message instanceof Uint8Array;
   }
 
   async getBalance(address?: string): Promise<number> {

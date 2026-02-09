@@ -15,7 +15,11 @@ export abstract class BaseProvider {
 
   constructor(keystore?: KeystoreBase | KeystoreOptions) {
     // Allow injecting a custom keystore implementation.
-    if (keystore && typeof (keystore as any).read === 'function' && typeof (keystore as any).write === 'function') {
+    if (
+      keystore &&
+      typeof (keystore as any).read === 'function' &&
+      typeof (keystore as any).write === 'function'
+    ) {
       this.keystore = keystore as KeystoreBase;
     } else {
       this.keystore = new Keystore(keystore as KeystoreOptions | undefined);
@@ -28,14 +32,23 @@ export abstract class BaseProvider {
    * Must be called after construction (constructors cannot be async).
    */
   async init(): Promise<this> {
-    logger.debug({ keystorePath: this.keystore.getPath() }, 'provider keystore init: reading keystore');
+    logger.debug(
+      { keystorePath: this.keystore.getPath() },
+      'provider keystore init: reading keystore',
+    );
     await this.keystore.read();
-    logger.debug({ keystorePath: this.keystore.getPath() }, 'provider keystore init: loaded');
+    logger.debug(
+      { keystorePath: this.keystore.getPath() },
+      'provider keystore init: loaded',
+    );
     return this;
   }
 
   /** Get account info; must include wallet address. */
   abstract getAccountInfo(): Promise<AccountInfo>;
+
+  /** Sign an arbitrary message (bytes) and return signature string. */
+  abstract signMessage(message: Uint8Array): Promise<string>;
 
   /**
    * Sign an unsigned transaction (or message request) and return the signed result.

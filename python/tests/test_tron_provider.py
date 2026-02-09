@@ -94,7 +94,7 @@ async def test_sign_message(provider):
             return "msg-sig-hex"
 
     provider._key.sign_msg.return_value = _Sig()
-    sig = await provider.sign_message("hello", encoding="utf8")
+    sig = await provider.sign_message(b"hello")
     assert sig == "msg-sig-hex"
 
 
@@ -105,6 +105,6 @@ async def test_sign_tx_message(provider):
             return "msg-sig-hex"
 
     provider._key.sign_msg.return_value = _Sig()
-    result = await provider.sign_tx({"type": "message", "message": "hello", "encoding": "utf8"})
+    result = await provider.sign_tx({"type": "message", "message": b"hello"})
     assert result["signature"] == "msg-sig-hex"
-    assert result["signed_tx"] == {"type": "message", "message": "hello", "encoding": "utf8"}
+    assert result["signed_tx"] == {"type": "message", "message": b"hello"}

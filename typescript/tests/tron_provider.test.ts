@@ -9,6 +9,7 @@ describe("TronProvider", () => {
   let mockGetBalance: jest.Mock;
   let mockSendRawTransaction: jest.Mock;
   let mockSign: jest.Mock;
+  let mockSignMessageV2: jest.Mock;
   let mockContract: jest.Mock;
   let mockFromPrivateKey: jest.Mock;
   let mockSendTrx: jest.Mock;
@@ -18,6 +19,7 @@ describe("TronProvider", () => {
 
     mockGetBalance = jest.fn();
     mockSign = jest.fn();
+    mockSignMessageV2 = jest.fn();
     mockSendRawTransaction = jest.fn();
     mockContract = jest.fn(); // at
     mockFromPrivateKey = jest.fn();
@@ -29,6 +31,7 @@ describe("TronProvider", () => {
         trx: {
           getBalance: mockGetBalance,
           sign: mockSign,
+          signMessageV2: mockSignMessageV2,
           sendRawTransaction: mockSendRawTransaction,
         },
         address: {
@@ -128,5 +131,19 @@ describe("TronProvider", () => {
     expect(mockSign).toHaveBeenCalledWith(unsignedTx);
     expect(result.signedTx).toEqual({ txID: "abc", signature: ["sig-hex"] });
     expect(result.signature).toBe("sig-hex");
+  });
+
+  it("should signMessage return signature", async () => {
+    mockSignMessageV2.mockReturnValue("msg-sig");
+    const sig = await provider.signMessage(Buffer.from("hello", "utf8"));
+    expect(sig).toBe("msg-sig");
+  });
+
+  it("should signTx sign a message and return signature", async () => {
+    mockSignMessageV2.mockReturnValue("msg-sig");
+    const msg = Buffer.from("hello", "utf8");
+    const result = await provider.signTx({ type: "message", message: msg });
+    expect(result.signature).toBe("msg-sig");
+    expect((result.signedTx as any).type).toBe("message");
   });
 });

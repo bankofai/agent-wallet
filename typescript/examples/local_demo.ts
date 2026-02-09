@@ -18,8 +18,8 @@ class LocalTronProvider extends TronProvider {
     // For demo purposes, treat tx.txID as a hex string and sign that message.
     const txID = transaction?.txID ?? '00';
     const msg = typeof txID === 'string' ? txID : JSON.stringify(txID);
-    const sig = await this.signTx({ type: 'message', message: msg, encoding: 'utf8' });
-    return { ...transaction, signature: [sig.signature ?? ''] };
+    const sig = await this.signMessage(Buffer.from(msg, 'utf8'));
+    return { ...transaction, signature: [sig] };
   }
 
   override async getBalance(_address?: string): Promise<number> {
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
   await tron.init();
 
   console.log('[tron] account:', await tron.getAccountInfo());
-  console.log('[tron] signTx(message):', await tron.signTx({ type: 'message', message: 'hello', encoding: 'utf8' }));
+  console.log('[tron] signTx(message):', await tron.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') }));
   console.log('[tron] signTx(tx):', await tron.signTx({ txID: 'tx-demo' }));
   console.log('[tron] sign(tx):', await tron.sign({ txID: 'tx-demo-2' }));
   console.log('[tron] balance:', await tron.getBalance());
@@ -88,7 +88,7 @@ async function main(): Promise<void> {
   // ===== FlashProvider (all methods, local stubs) =====
   const flash = new LocalFlashProvider({ keystore: { filePath: tmpKeystorePath, password } });
   await flash.init();
-  console.log('[flash] signTx(message):', await flash.signTx({ type: 'message', message: 'hello', encoding: 'utf8' }));
+  console.log('[flash] signTx(message):', await flash.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') }));
   console.log('[flash] sign(tx):', await flash.sign({ txID: 'flash-tx' }));
   console.log('[flash] sendTransaction:', await flash.sendTransaction('recipient', 2));
 }

@@ -124,12 +124,11 @@ class TronProvider(BaseProvider):
         if (
             isinstance(unsigned_tx, dict)
             and unsigned_tx.get("type") == "message"
-            and isinstance(unsigned_tx.get("message"), str)
+            and isinstance(unsigned_tx.get("message"), (bytes, bytearray))
         ):
-            encoding = unsigned_tx.get("encoding") or "utf8"
-            signature = await self.sign_message(unsigned_tx["message"], encoding=encoding)
+            signature = await self.sign_message(bytes(unsigned_tx["message"]))
             return {
-                "signed_tx": {"type": "message", "message": unsigned_tx["message"], "encoding": encoding},
+                "signed_tx": {"type": "message", "message": bytes(unsigned_tx["message"])},
                 "signature": signature,
             }
 
@@ -142,22 +141,15 @@ class TronProvider(BaseProvider):
             signature = None
         return {"signed_tx": signed, "signature": signature}
 
-    async def sign_message(self, message: str, encoding: str = "utf8") -> str:
-        """Sign an arbitrary message and return a raw signature hex string.
+    async def sign_message(self, message: bytes) -> str:
+        """Sign an arbitrary message (bytes) and return a raw signature hex string."""
+        return self._sign_message(message)
 
-        - encoding: "utf8" (default) or "hex" (message is hex string)
-        """
-        return self._sign_message(message, encoding=encoding)
-
-    def _sign_message(self, message: str, encoding: str = "utf8") -> str:
+    def _sign_message(self, message: bytes) -> str:
         """Sync helper for message signing."""
         if not self._key:
             raise ValueError("Private key not provided for signing")
-        if encoding == "hex":
-            msg_bytes = bytes.fromhex(message)
-        else:
-            msg_bytes = message.encode("utf-8")
-        sig = self._key.sign_msg(msg_bytes)
+        sig = self._key.sign_msg(message)
         return sig.hex()
 
     async def get_balance(self, address: Optional[str] = None) -> float:

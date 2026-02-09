@@ -77,6 +77,47 @@ export class FlashProvider extends TronProvider {
     return provider;
   }
 
+  override async signMessage(message: Uint8Array): Promise<string> {
+    // If Privy not configured, fall back to local signing (TronProvider)
+    if (!this.privyAppId || !this.privyAppSecret || !this.walletId) {
+      return super.signMessage(message);
+    }
+
+    const msgHex = Buffer.from(message).toString("hex");
+    const url = `https://auth.privy.io/api/v1/wallets/${encodeURIComponent(this.walletId)}/sign`;
+    const auth = btoa(`${this.privyAppId}:${this.privyAppSecret}`);
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`,
+        "Content-Type": "application/json",
+        "privy-app-id": this.privyAppId,
+      },
+      body: JSON.stringify({
+        method: "raw_sign",
+        params: {
+          message: msgHex,
+          encoding: "hex",
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text().catch(() => "");
+      throw new Error(
+        `Privy signing failed (${response.status}): ${errBody || response.statusText}`,
+      );
+    }
+
+    const data = await response.json();
+    const signature = data.signature;
+    if (!signature) {
+      throw new Error("Privy signing response did not contain a signature");
+    }
+    return signature;
+  }
+
   async sign(transaction: any): Promise<any> {
     if (!this.privyAppId || !this.privyAppSecret || !this.walletId) {
       return super.sign(transaction);

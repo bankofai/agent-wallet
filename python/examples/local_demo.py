@@ -30,7 +30,7 @@ class LocalTronProvider(TronProvider):
     async def sign_transaction(self, transaction):
         # Local stub: attach a signature by signing a message derived from txid/txID
         txid = getattr(transaction, "txid", None) or getattr(transaction, "txID", None) or "tx-demo"
-        sig = await self.sign_message(str(txid), encoding="utf8")
+        sig = await self.sign_message(str(txid).encode("utf-8"))
         transaction._signature = [sig]
         return transaction
 
@@ -63,7 +63,7 @@ async def main() -> int:
     tron = LocalTronProvider(keystore_path=tmp_path, keystore_password=password)
     await tron.init()
     print("[tron] account:", await tron.get_account_info())
-    print("[tron] sign_tx(message):", await tron.sign_tx({"type": "message", "message": "hello", "encoding": "utf8"}))
+    print("[tron] sign_tx(message):", await tron.sign_tx({"type": "message", "message": b"hello"}))
     # stub transaction object
     class Tx:
         txid = "tx-demo"
@@ -84,7 +84,7 @@ async def main() -> int:
         wallet_id=None,
     )
     await flash.init()
-    print("[flash] sign_tx(message):", await flash.sign_tx({"type": "message", "message": "hello", "encoding": "utf8"}))
+    print("[flash] sign_tx(message):", await flash.sign_tx({"type": "message", "message": b"hello"}))
     print("[flash] send_transaction:", await flash.send_transaction("recipient", 2.0))
 
     return 0

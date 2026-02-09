@@ -116,19 +116,16 @@ class FlashProvider(TronProvider):
             transaction._signature = [data["signature"]]
             return transaction
 
-    async def sign_message(self, message: str, encoding: str = "utf8") -> str:
+    async def sign_message(self, message: bytes) -> str:
         """Sign an arbitrary message and return a raw signature string.
 
         If Privy credentials are not configured, falls back to local signing
         (same as TronProvider).
         """
         if not self.privy_app_id or not self.privy_app_secret or not self.wallet_id:
-            return await super().sign_message(message, encoding=encoding)
+            return await super().sign_message(message)
 
-        if encoding == "hex":
-            msg_hex = message
-        else:
-            msg_hex = message.encode("utf-8").hex()
+        msg_hex = message.hex()
 
         sign_url = f"https://auth.privy.io/api/v1/wallets/{self.wallet_id}/sign"
         headers = {

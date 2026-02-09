@@ -100,7 +100,7 @@ async def test_sign_message_privy(provider):
         mock_resp.json.return_value = {"signature": "msgsig"}
         mock_client.post.return_value = mock_resp
 
-        sig = await provider.sign_message("hello", encoding="utf8")
+        sig = await provider.sign_message(b"hello")
         assert sig == "msgsig"
 
         _, kwargs = mock_client.post.call_args
