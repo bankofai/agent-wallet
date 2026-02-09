@@ -35,15 +35,13 @@ describe('FlashProvider', () => {
       };
     });
 
-    provider = new FlashProvider(
-      'http://fullnode',
-      'http://fullnode',
-      '',
-      '',
-      'privy_app_id',
-      'privy_app_secret',
-      'privy_wallet_id'
-    );
+    provider = new FlashProvider({
+      fullNode: 'http://fullnode',
+      flashNode: 'http://fullnode',
+      privyAppId: 'privy_app_id',
+      privyAppSecret: 'privy_app_secret',
+      walletId: 'privy_wallet_id',
+    });
   });
 
   it('should sign transaction with Privy', async () => {

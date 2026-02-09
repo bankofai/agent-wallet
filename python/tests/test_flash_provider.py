@@ -88,3 +88,21 @@ async def test_send_transaction_privy(provider, mock_tron_client):
         assert result["result"] is True
         assert mock_txn._signature == ["somesig"]
         mock_txn.broadcast.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_sign_message_privy(provider):
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client_cls.return_value.__aenter__.return_value = mock_client
+
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {"signature": "msgsig"}
+        mock_client.post.return_value = mock_resp
+
+        sig = await provider.sign_message("hello", encoding="utf8")
+        assert sig == "msgsig"
+
+        _, kwargs = mock_client.post.call_args
+        assert kwargs["json"]["params"]["message"] == "68656c6c6f"  # "hello" in hex
+        assert kwargs["json"]["params"]["encoding"] == "hex"
