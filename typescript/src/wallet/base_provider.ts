@@ -3,7 +3,7 @@ import { Keystore, KeystoreBase, type KeystoreOptions } from '../keystore';
 import { logger } from '../logger';
 
 /**
- * Abstract base provider: compatible getAccountInfo and signTx.
+ * Abstract base provider: compatible getAccountInfo/signTx/signMessage.
  * Subclasses (TronProvider, FlashProvider) implement chain-specific logic.
  *
  * Keystore initialization (file creation) is handled by CLI.
@@ -50,7 +50,7 @@ export abstract class BaseProvider {
   abstract signMessage(message: Uint8Array): Promise<string>;
 
   /**
-   * Sign an unsigned transaction (or message request) and return the signed result.
+   * Sign an unsigned transaction and return the signed result.
    * @param unsignedTx - Chain-specific unsigned payload
    */
   abstract signTx(unsignedTx: unknown): Promise<SignedTxResult>;

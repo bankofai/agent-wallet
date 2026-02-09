@@ -4,6 +4,7 @@
 
 - **BaseProvider**: Abstract base class with a unified interface:
   - `getAccountInfo(): Promise<AccountInfo>` — returns `{ address: string }` (wallet address)
+  - `signMessage(message: Uint8Array): Promise<string>` — signs arbitrary bytes and returns a signature string
   - `signTx(unsignedTx: unknown): Promise<SignedTxResult>` — accepts an unsigned payload, signs it, and returns `{ signedTx, signature? }`
 - Providers depend on an abstract **KeystoreBase** type, so you can inject other keystore implementations if needed (default is the file-based `Keystore` at `~/.agent_wallet/Keystore`).
 - **TronProvider**: Extends BaseProvider; uses TronWeb with local private-key signing.
