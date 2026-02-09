@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { encrypt, decrypt, isEncryptedPayload, type EncryptedPayload } from './keystore_crypto';
 import { encodeKeystoreData, decodeKeystoreData } from './keystore_proto';
 import { logger } from '../logger';
 
@@ -16,8 +15,6 @@ const DEFAULT_PATH = path.join(os.homedir(), '.agent_wallet', DEFAULT_KEYSTORE_F
 export interface KeystoreOptions {
   /** Full path to keystore file. Default: ~/.agent_wallet/Keystore */
   filePath?: string;
-  /** If set, file is encrypted with this password */
-  password?: string;
 }
 
 /**
@@ -36,25 +33,23 @@ export abstract class KeystoreBase {
 }
 
 /**
- * Keystore: fixed-path protobuf file storing account info with optional encryption.
+ * Keystore: fixed-path protobuf file storing account info.
  */
 export class Keystore extends KeystoreBase {
   private filePath: string;
-  private password: string | undefined;
   private data: KeystoreData = {};
   private loaded = false;
 
   constructor(options: KeystoreOptions = {}) {
     super();
     this.filePath = options.filePath ?? process.env.KEYSTORE_PATH ?? DEFAULT_PATH;
-    this.password = options.password ?? process.env.KEYSTORE_PASSWORD;
   }
 
   getPath(): string {
     return this.filePath;
   }
 
-  /** Read from file (decrypt if password was set). Supports legacy JSON and new protobuf format. */
+  /** Read from file. Supports legacy JSON and protobuf binary format. */
   async read(): Promise<KeystoreData> {
     logger.debug({ filePath: this.filePath }, 'keystore: read start');
     if (!fs.existsSync(this.filePath)) {
@@ -65,7 +60,7 @@ export class Keystore extends KeystoreBase {
     }
     const rawBuf = fs.readFileSync(this.filePath);
 
-    // Try JSON first (encrypted or legacy plaintext)
+    // Try legacy JSON first (old plaintext format)
     let parsed: unknown;
     let parsedAsJson = false;
     try {
@@ -76,25 +71,7 @@ export class Keystore extends KeystoreBase {
       parsedAsJson = false;
     }
 
-    if (parsedAsJson && isEncryptedPayload(parsed)) {
-      if (!this.password) {
-        throw new Error('Keystore is encrypted but no password provided (KEYSTORE_PASSWORD or options.password)');
-      }
-      logger.debug({ filePath: this.filePath }, 'keystore: detected encrypted JSON payload');
-      const plain = await decrypt(parsed as EncryptedPayload, this.password);
-      // Backwards compatibility: plaintext may be JSON or base64-encoded protobuf
-      try {
-        const maybeJson = JSON.parse(plain) as unknown;
-        if (maybeJson && typeof maybeJson === 'object' && !Array.isArray(maybeJson)) {
-          this.data = maybeJson as KeystoreData;
-        } else {
-          throw new Error('not plain object');
-        }
-      } catch {
-        const buf = Buffer.from(plain, 'base64');
-        this.data = decodeKeystoreData(buf);
-      }
-    } else if (parsedAsJson && parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    if (parsedAsJson && parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       logger.debug({ filePath: this.filePath }, 'keystore: detected legacy JSON plaintext');
       this.data = parsed as KeystoreData;
     } else {
@@ -102,7 +79,7 @@ export class Keystore extends KeystoreBase {
       this.data = decodeKeystoreData(rawBuf);
     }
     this.loaded = true;
-    logger.info({ filePath: this.filePath, keys: Object.keys(this.data).length, encrypted: Boolean(this.password) }, 'keystore: read ok');
+    logger.info({ filePath: this.filePath, keys: Object.keys(this.data).length }, 'keystore: read ok');
     return { ...this.data };
   }
 
@@ -132,7 +109,7 @@ export class Keystore extends KeystoreBase {
     return { ...this.data };
   }
 
-  /** Write current data to file (encrypt if password is set) using protobuf storage. Atomic via tmp+rename. */
+  /** Write current data to file using protobuf storage. Atomic via tmp+rename. */
   async write(): Promise<void> {
     const dir = path.dirname(this.filePath);
     if (!fs.existsSync(dir)) {
@@ -140,24 +117,18 @@ export class Keystore extends KeystoreBase {
     }
     const tmpPath = this.filePath + '.tmp';
     const protoBuf = encodeKeystoreData(this.data);
-    if (this.password) {
-      const plaintext = protoBuf.toString('base64');
-      const payload = await encrypt(plaintext, this.password);
-      fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
-    } else {
-      fs.writeFileSync(tmpPath, protoBuf);
-    }
+    fs.writeFileSync(tmpPath, protoBuf);
     fs.renameSync(tmpPath, this.filePath);
-    logger.info({ filePath: this.filePath, keys: Object.keys(this.data).length, encrypted: Boolean(this.password) }, 'keystore: write ok');
+    logger.info({ filePath: this.filePath, keys: Object.keys(this.data).length }, 'keystore: write ok');
   }
 
-  static async fromFile(filePath: string, password?: string): Promise<KeystoreData> {
-    const ks = new Keystore({ filePath, password });
+  static async fromFile(filePath: string): Promise<KeystoreData> {
+    const ks = new Keystore({ filePath });
     return ks.read();
   }
 
-  static async toFile(filePath: string, data: KeystoreData, password?: string): Promise<void> {
-    const ks = new Keystore({ filePath, password });
+  static async toFile(filePath: string, data: KeystoreData): Promise<void> {
+    const ks = new Keystore({ filePath });
     ks.data = { ...data };
     ks.loaded = true;
     await ks.write();

@@ -6,11 +6,10 @@
  *   npx ts-node src/cli/keystore_cli.ts read [key]     # read one key or all
  *   npx ts-node src/cli/keystore_cli.ts write <key> <value>  # write one key
  *   npx ts-node src/cli/keystore_cli.ts delete <key>   # remove one key
- *   npx ts-node src/cli/keystore_cli.ts init           # create empty keystore (optionally encrypted)
+ *   npx ts-node src/cli/keystore_cli.ts init           # create empty keystore
  *
  * Options:
  *   --path <file>    Keystore file path (default: ./.keystore.json)
- *   --password <pwd> Password for encrypt/decrypt (or set KEYSTORE_PASSWORD)
  */
 
 import * as fs from 'fs';
@@ -30,11 +29,10 @@ function hasFlag(name: string): boolean {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const filePath = getArg('--path') ?? process.env.KEYSTORE_PATH ?? path.join(require('os').homedir(), '.agent_wallet', 'Keystore');
-  const password = getArg('--password') ?? process.env.KEYSTORE_PASSWORD;
 
   const args: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--path' || argv[i] === '--password') {
+    if (argv[i] === '--path') {
       i++;
       continue;
     }
@@ -42,7 +40,7 @@ async function main(): Promise<void> {
   }
   const cmd = args[0]?.toLowerCase();
 
-  const keystore = new Keystore({ filePath, password });
+  const keystore = new Keystore({ filePath });
 
   if (!cmd || cmd === 'help' || hasFlag('--help') || hasFlag('-h')) {
     console.log(`
@@ -55,7 +53,6 @@ Keystore CLI - read/write keystore storage
 
 Options:
   --path <file>           Keystore file (default: ./.keystore.json)
-  --password <pwd>        Encryption password (or KEYSTORE_PASSWORD)
 `);
     return;
   }
@@ -109,7 +106,7 @@ Options:
         process.exit(1);
       }
       delete all[key];
-      await Keystore.toFile(filePath, all, password);
+      await Keystore.toFile(filePath, all);
       console.log(`Deleted: ${key}`);
       return;
     }
@@ -119,7 +116,7 @@ Options:
         console.error(`File already exists: ${filePath}`);
         process.exit(1);
       }
-      await Keystore.toFile(filePath, {}, password);
+      await Keystore.toFile(filePath, {});
       console.log(`Created: ${filePath}`);
       return;
     }

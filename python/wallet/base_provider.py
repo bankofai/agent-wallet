@@ -14,12 +14,9 @@ class BaseProvider(ABC):
     def __init__(
         self,
         keystore_path: Optional[str] = None,
-        keystore_password: Optional[str] = None,
         keystore: Optional[KeystoreBase] = None,
     ):
-        self.keystore: KeystoreBase = keystore or Keystore(
-            file_path=keystore_path, password=keystore_password
-        )
+        self.keystore: KeystoreBase = keystore or Keystore(file_path=keystore_path)
 
     async def init(self) -> "BaseProvider":
         """Load keystore (constructors cannot be async)."""

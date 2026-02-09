@@ -1,15 +1,13 @@
-"""Keystore: fixed-path protobuf file for account info with optional encryption."""
+"""Keystore: fixed-path protobuf file for account info."""
 
 from __future__ import annotations
 
-import base64
 import json
 import os
 from pathlib import Path
 from typing import Optional
 
 from keystore.base import KeystoreBase, KeystoreData
-from keystore.keystore_crypto import decrypt, encrypt, is_encrypted_payload
 from keystore.keystore_proto import decode_keystore_data, encode_keystore_data
 
 DEFAULT_KEYSTORE_FILENAME = "Keystore"
@@ -20,15 +18,13 @@ def _default_path() -> str:
 
 
 class Keystore(KeystoreBase):
-    """File-based keystore (protobuf bytes; optionally encrypted JSON wrapper)."""
+    """File-based keystore (protobuf bytes)."""
 
     def __init__(
         self,
         file_path: Optional[str] = None,
-        password: Optional[str] = None,
     ):
         self.file_path = file_path or os.environ.get("KEYSTORE_PATH") or _default_path()
-        self.password = password or os.environ.get("KEYSTORE_PASSWORD")
         self._data: KeystoreData = {}
         self._loaded = False
 
@@ -44,7 +40,7 @@ class Keystore(KeystoreBase):
         with open(self.file_path, "rb") as f:
             raw = f.read()
 
-        # Try JSON first (encrypted or legacy plaintext)
+        # Try legacy JSON first (old plaintext format)
         parsed: object
         parsed_as_json = False
         try:
@@ -55,23 +51,7 @@ class Keystore(KeystoreBase):
             parsed = None
             parsed_as_json = False
 
-        if parsed_as_json and is_encrypted_payload(parsed):
-            if not self.password:
-                raise ValueError(
-                    "Keystore is encrypted but no password provided (KEYSTORE_PASSWORD or password=)"
-                )
-            plain = decrypt(parsed, self.password)
-            # Backwards compatibility: plaintext may be JSON or base64-encoded protobuf
-            try:
-                maybe_json = json.loads(plain)
-                if isinstance(maybe_json, dict):
-                    self._data = maybe_json  # legacy JSON data
-                else:
-                    raise ValueError("not plain object")
-            except Exception:
-                buf = base64.b64decode(plain)
-                self._data = decode_keystore_data(buf)
-        elif parsed_as_json and isinstance(parsed, dict):
+        if parsed_as_json and isinstance(parsed, dict):
             # Legacy unencrypted JSON format
             self._data = parsed
         else:
@@ -108,29 +88,22 @@ class Keystore(KeystoreBase):
         tmp_path = self.file_path + ".tmp"
 
         proto_bytes = encode_keystore_data(self._data)
-        if self.password:
-            plaintext = base64.b64encode(proto_bytes).decode("ascii")
-            payload = encrypt(plaintext, self.password)
-            with open(tmp_path, "w", encoding="utf-8") as f:
-                json.dump(payload, f, indent=2, ensure_ascii=False)
-        else:
-            with open(tmp_path, "wb") as f:
-                f.write(proto_bytes)
+        with open(tmp_path, "wb") as f:
+            f.write(proto_bytes)
 
         os.replace(tmp_path, self.file_path)
 
     @staticmethod
-    def from_file(file_path: str, password: Optional[str] = None) -> KeystoreData:
-        ks = Keystore(file_path=file_path, password=password)
+    def from_file(file_path: str) -> KeystoreData:
+        ks = Keystore(file_path=file_path)
         return ks.read()
 
     @staticmethod
     def to_file(
         file_path: str,
         data: KeystoreData,
-        password: Optional[str] = None,
     ) -> None:
-        ks = Keystore(file_path=file_path, password=password)
+        ks = Keystore(file_path=file_path)
         ks._data = dict(data)
         ks._loaded = True
         ks.write()

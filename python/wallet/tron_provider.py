@@ -20,7 +20,6 @@ class TronProvider(BaseProvider):
         private_key: Optional[str] = None,
         api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
-        keystore_password: Optional[str] = None,
         keystore=None,
     ):
         """
@@ -30,7 +29,6 @@ class TronProvider(BaseProvider):
         """
         super().__init__(
             keystore_path=keystore_path,
-            keystore_password=keystore_password,
             keystore=keystore,
         )
 
@@ -97,7 +95,6 @@ class TronProvider(BaseProvider):
         private_key: Optional[str] = None,
         api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
-        keystore_password: Optional[str] = None,
         keystore=None,
     ) -> "TronProvider":
         """Factory: create and init a TronProvider in one step."""
@@ -106,7 +103,6 @@ class TronProvider(BaseProvider):
             private_key=private_key,
             api_key=api_key,
             keystore_path=keystore_path,
-            keystore_password=keystore_password,
             keystore=keystore,
         )
         await provider.init()

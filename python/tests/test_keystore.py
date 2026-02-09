@@ -6,7 +6,6 @@ import shutil
 import pytest
 
 from keystore.keystore import Keystore
-from keystore.keystore_crypto import encrypt, decrypt, is_encrypted_payload
 from keystore.keystore_proto import encode_keystore_data, decode_keystore_data
 
 
@@ -60,43 +59,6 @@ class TestKeystoreProto:
         truncated = buf[: len(buf) - 3]
         with pytest.raises(ValueError):
             decode_keystore_data(truncated)
-
-
-# ============================================================
-# Crypto encrypt / decrypt
-# ============================================================
-
-class TestKeystoreCrypto:
-    def test_encrypt_decrypt_roundtrip(self):
-        plaintext = "hello world"
-        password = "test-password"
-        payload = encrypt(plaintext, password)
-        assert is_encrypted_payload(payload)
-        assert payload["version"] == 1
-        result = decrypt(payload, password)
-        assert result == plaintext
-
-    def test_wrong_password_fails(self):
-        payload = encrypt("secret", "correct-password")
-        with pytest.raises(Exception):
-            decrypt(payload, "wrong-password")
-
-    def test_different_ciphertext_for_same_input(self):
-        plaintext = "same input"
-        password = "pw"
-        a = encrypt(plaintext, password)
-        b = encrypt(plaintext, password)
-        assert a["salt"] != b["salt"]
-        assert a["iv"] != b["iv"]
-        assert decrypt(a, password) == plaintext
-        assert decrypt(b, password) == plaintext
-
-    def test_is_encrypted_payload_rejects_non_payloads(self):
-        assert is_encrypted_payload(None) is False
-        assert is_encrypted_payload(42) is False
-        assert is_encrypted_payload({}) is False
-        assert is_encrypted_payload({"version": 2, "salt": "", "iv": "", "tag": "", "data": ""}) is False
-        assert is_encrypted_payload({"version": 1, "salt": "a", "iv": "b", "tag": "c", "data": "d"}) is True
 
 
 # ============================================================
@@ -170,66 +132,6 @@ class TestKeystoreUnencrypted:
         Keystore.to_file(fp, {"k": "v"})
         assert os.path.exists(fp)
         assert Keystore.from_file(fp) == {"k": "v"}
-
-
-# ============================================================
-# Keystore class — encrypted
-# ============================================================
-
-class TestKeystoreEncrypted:
-    def test_write_and_read_encrypted(self, tmp_dir):
-        fp = tmp_file(tmp_dir, "ks-enc")
-        pw = "my-password"
-        Keystore.to_file(fp, {"secret": "treasure"}, pw)
-
-        raw = json.loads(open(fp, "r").read())
-        assert is_encrypted_payload(raw)
-
-        data = Keystore.from_file(fp, pw)
-        assert data == {"secret": "treasure"}
-
-    def test_read_encrypted_without_password(self, tmp_dir):
-        fp = tmp_file(tmp_dir, "ks-enc-nopw")
-        Keystore.to_file(fp, {"a": "b"}, "pw")
-        ks = Keystore(file_path=fp)
-        with pytest.raises(ValueError, match="no password provided"):
-            ks.read()
-
-    def test_read_encrypted_wrong_password(self, tmp_dir):
-        fp = tmp_file(tmp_dir, "ks-enc-wrong")
-        Keystore.to_file(fp, {"a": "b"}, "correct")
-        ks = Keystore(file_path=fp, password="wrong")
-        with pytest.raises(Exception):
-            ks.read()
-
-    def test_roundtrip_multiple_entries_encrypted(self, tmp_dir):
-        fp = tmp_file(tmp_dir, "ks-enc-multi")
-        pw = "complex-pw-123!"
-        original = {
-            "privateKey": "deadbeefdeadbeef",
-            "apiKey": "ak-123456",
-            "secretKey": "sk-abcdef",
-            "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
-        }
-        Keystore.to_file(fp, original, pw)
-        result = Keystore.from_file(fp, pw)
-        assert result == original
-
-    def test_set_write_preserves_encryption(self, tmp_dir):
-        fp = tmp_file(tmp_dir, "ks-enc-set")
-        pw = "pw"
-        Keystore.to_file(fp, {"a": "1"}, pw)
-
-        ks = Keystore(file_path=fp, password=pw)
-        ks.read()
-        ks.set("b", "2")
-        ks.write()
-
-        data = Keystore.from_file(fp, pw)
-        assert data == {"a": "1", "b": "2"}
-
-        raw = json.loads(open(fp, "r").read())
-        assert is_encrypted_payload(raw)
 
 
 # ============================================================

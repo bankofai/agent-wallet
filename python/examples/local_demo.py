@@ -42,10 +42,9 @@ class LocalFlashProvider(FlashProvider):
 
 async def main() -> int:
     tmp_path = os.path.join(tempfile.gettempdir(), f"agent-wallet-keystore-{os.getpid()}.bin")
-    password = "local-demo-password"
 
     # ===== Keystore (all methods) =====
-    ks = Keystore(file_path=tmp_path, password=password)
+    ks = Keystore(file_path=tmp_path)
     print("[keystore] path:", ks.get_path())
     ks.read()
     ks.set("privateKey", "11" * 32)  # demo-only key, do not use in production
@@ -55,12 +54,12 @@ async def main() -> int:
     print("[keystore] keys:", sorted(ks.keys()))
     print("[keystore] privateKey len:", len(ks.get("privateKey") or ""))
     print("[keystore] all:", ks.get_all())
-    snap = Keystore.from_file(tmp_path, password)
+    snap = Keystore.from_file(tmp_path)
     print("[keystore] from_file:", snap)
-    Keystore.to_file(tmp_path, {**snap, "note": "updated by to_file"}, password)
+    Keystore.to_file(tmp_path, {**snap, "note": "updated by to_file"})
 
     # ===== TronProvider (all methods, local stubs) =====
-    tron = LocalTronProvider(keystore_path=tmp_path, keystore_password=password)
+    tron = LocalTronProvider(keystore_path=tmp_path)
     await tron.init()
     print("[tron] account:", await tron.get_account_info())
     print("[tron] sign_tx(message):", await tron.sign_tx({"type": "message", "message": b"hello"}))
@@ -77,7 +76,6 @@ async def main() -> int:
     # ===== FlashProvider (all methods, local stubs) =====
     flash = LocalFlashProvider(
         keystore_path=tmp_path,
-        keystore_password=password,
         # keep privy creds unset so it falls back to local signing if used
         privy_app_id=None,
         privy_app_secret=None,

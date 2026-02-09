@@ -29,7 +29,6 @@ import { TronProvider } from './src/wallet';
 const tron = new TronProvider({
   privateKey: process.env.TRON_PRIVATE_KEY, // optional, overrides keystore/env
   apiKey: process.env.TRON_GRID_API_KEY,   // optional
-  keystore: { password: process.env.KEYSTORE_PASSWORD },
 });
 await tron.init();
 
@@ -40,17 +39,16 @@ const signed = await tron.signTx(unsignedTx);
 ### Sign an arbitrary message
 
 ```ts
-const res = await tron.signTx({ type: 'message', message: 'hello', encoding: 'utf8' });
+const res = await tron.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') });
 console.log(res.signature);
 ```
 
 ## Keystore
 
-A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption. The storage format is cross-language compatible with the Python SDK.
+A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.). The storage format is cross-language compatible with the Python SDK.
 
 - **Path**: Default `~/.agent_wallet/Keystore`; override via `KEYSTORE_PATH` env var or the `filePath` option.
 - **Storage format**: Protobuf wire format (`map<string, string>`), NOT JSON.
-- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, protobuf bytes are base64-encoded and wrapped in an AES-256-GCM encrypted JSON payload (key derived via scrypt).
 - **Atomic writes**: All writes go through a `.tmp` file then `rename`, preventing data loss on crash.
 - **Backward compatible**: Can still read legacy plain-JSON keystore files.
 

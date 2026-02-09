@@ -10,7 +10,6 @@ Usage:
 
 Options:
   --path <file>    Keystore file path (default: ./.keystore.json)
-  --password <pwd>  Password for encrypt/decrypt (or KEYSTORE_PASSWORD)
 """
 import argparse
 import os
@@ -40,11 +39,6 @@ Commands:
         default=os.environ.get("KEYSTORE_PATH", str(Path.home() / ".agent_wallet" / "Keystore")),
         help="Keystore file path",
     )
-    parser.add_argument(
-        "--password",
-        default=os.environ.get("KEYSTORE_PASSWORD"),
-        help="Encryption password",
-    )
     parser.add_argument("command", nargs="?", choices=["read", "write", "delete", "init"], help="Command")
     parser.add_argument("args", nargs="*", help="Key and/or value")
     parsed = parser.parse_args()
@@ -52,9 +46,8 @@ Commands:
     cmd = (parsed.command or "").lower()
     args = parsed.args or []
     file_path = parsed.path
-    password = parsed.password
 
-    ks = Keystore(file_path=file_path, password=password)
+    ks = Keystore(file_path=file_path)
 
     if not cmd:
         parser.print_help()
@@ -95,14 +88,14 @@ Commands:
                 print(f"Key not found: {key}", file=sys.stderr)
                 sys.exit(1)
             del data[key]
-            Keystore.to_file(file_path, data, password)
+            Keystore.to_file(file_path, data)
             print(f"Deleted: {key}")
 
         elif cmd == "init":
             if os.path.isfile(file_path):
                 print(f"File already exists: {file_path}", file=sys.stderr)
                 sys.exit(1)
-            Keystore.to_file(file_path, {}, password)
+            Keystore.to_file(file_path, {})
             print(f"Created: {file_path}")
 
     except Exception as e:

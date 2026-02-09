@@ -16,7 +16,6 @@ class FlashProvider(TronProvider):
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
         keystore_path: Optional[str] = None,
-        keystore_password: Optional[str] = None,
         keystore=None,
     ):
         """
@@ -29,7 +28,6 @@ class FlashProvider(TronProvider):
             api_key=api_key,
             private_key=None,
             keystore_path=keystore_path,
-            keystore_password=keystore_password,
             keystore=keystore,
         )
 
@@ -72,7 +70,6 @@ class FlashProvider(TronProvider):
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
         keystore_path: Optional[str] = None,
-        keystore_password: Optional[str] = None,
         keystore=None,
     ) -> "FlashProvider":
         """Factory: create and init a FlashProvider in one step."""
@@ -83,7 +80,6 @@ class FlashProvider(TronProvider):
             privy_app_secret=privy_app_secret,
             wallet_id=wallet_id,
             keystore_path=keystore_path,
-            keystore_password=keystore_password,
             keystore=keystore,
         )
         await provider.init()

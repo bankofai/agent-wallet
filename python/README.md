@@ -20,7 +20,6 @@ tron = TronProvider(
     private_key=os.getenv("TRON_PRIVATE_KEY"),   # optional, overrides keystore/env
     api_key=os.getenv("TRON_GRID_API_KEY"),      # optional
     keystore_path=os.getenv("KEYSTORE_PATH"),    # optional custom path
-    keystore_password=os.getenv("KEYSTORE_PASSWORD"),
 )
 await tron.init()
 
@@ -34,7 +33,6 @@ signed_tx = result["signed_tx"]
 ```python
 flash = FlashProvider(
     rpc_url=os.getenv("TRON_RPC_URL"),
-    keystore_password=os.getenv("KEYSTORE_PASSWORD"),
     # Optionally override values that might also live in the keystore:
     privy_app_id=os.getenv("PRIVY_APP_ID"),
     privy_app_secret=os.getenv("PRIVY_APP_SECRET"),
@@ -45,26 +43,25 @@ await flash.init()
 
 ## Keystore
 
-A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption.
+A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.).
 
 - **Path**: Default `~/.agent_wallet/Keystore`; override via `KEYSTORE_PATH` env var or the `file_path` argument.
 - **Storage format**: Protobuf wire format (`map<string, string>`), NOT JSON.
-- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, protobuf bytes are base64-encoded and wrapped in an AES-256-GCM encrypted JSON payload (key derived via scrypt).
 - **Atomic writes**: All writes go through a `.tmp` file then `os.replace`, preventing data loss on crash.
 - **Backward compatible**: Can still read legacy plain-JSON keystore files.
 
 ```python
 from keystore import Keystore
 
-ks = Keystore(password="secret")  # defaults to ~/.agent_wallet/Keystore
+ks = Keystore()  # defaults to ~/.agent_wallet/Keystore
 ks.read()
 private_key = ks.get("privateKey")
 ks.set("apiKey", "xxx")  # loads existing data first if not yet loaded
 ks.write()
 
 # Static helpers
-data = Keystore.from_file(os.path.expanduser("~/.agent_wallet/Keystore"), "secret")
-Keystore.to_file("/path/to/Keystore", {"privateKey": "abc"}, "secret")
+data = Keystore.from_file(os.path.expanduser("~/.agent_wallet/Keystore"))
+Keystore.to_file("/path/to/Keystore", {"privateKey": "abc"})
 ```
 
 ## Keystore CLI
@@ -84,14 +81,7 @@ keystore write privateKey "hex..."
 
 # Options
 --path /custom/path
---password xxx  or  KEYSTORE_PASSWORD=xxx
 ```
-
-## Encryption
-
-- **Without a password**: keystore is stored as raw protobuf binary.
-- **With a password**: protobuf bytes are base64-encoded, then encrypted with scrypt + AES-256-GCM and stored as `{ version, salt, iv, tag, data }`. The same password is required to decrypt on read.
-- Salt, IV, and tag lengths are validated on decrypt.
 
 ## Tests
 

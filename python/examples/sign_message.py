@@ -43,7 +43,6 @@ async def main() -> int:
         private_key=os.getenv("TRON_PRIVATE_KEY"),
         api_key=os.getenv("TRON_GRID_API_KEY"),
         keystore_path=os.getenv("KEYSTORE_PATH"),
-        keystore_password=os.getenv("KEYSTORE_PASSWORD"),
     )
     await provider.init()
 

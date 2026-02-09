@@ -52,10 +52,9 @@ class LocalFlashProvider extends FlashProvider {
 
 async function main(): Promise<void> {
   const tmpKeystorePath = path.join(os.tmpdir(), `agent-wallet-keystore-${Date.now()}.bin`);
-  const password = 'local-demo-password';
 
   // ===== Keystore (all methods) =====
-  const ks = new Keystore({ filePath: tmpKeystorePath, password });
+  const ks = new Keystore({ filePath: tmpKeystorePath });
   console.log('[keystore] path:', ks.getPath());
 
   await ks.read();
@@ -68,12 +67,12 @@ async function main(): Promise<void> {
   console.log('[keystore] privateKey len:', (await ks.get('privateKey'))?.length);
   console.log('[keystore] all:', await ks.getAll());
 
-  const snap = await Keystore.fromFile(tmpKeystorePath, password);
+  const snap = await Keystore.fromFile(tmpKeystorePath);
   console.log('[keystore] fromFile:', snap);
-  await Keystore.toFile(tmpKeystorePath, { ...snap, note: 'updated by toFile' }, password);
+  await Keystore.toFile(tmpKeystorePath, { ...snap, note: 'updated by toFile' });
 
   // ===== TronProvider (all methods, local stubs) =====
-  const tron = new LocalTronProvider({ keystore: { filePath: tmpKeystorePath, password } });
+  const tron = new LocalTronProvider({ keystore: { filePath: tmpKeystorePath } });
   await tron.init();
 
   console.log('[tron] account:', await tron.getAccountInfo());
@@ -86,7 +85,7 @@ async function main(): Promise<void> {
   console.log('[tron] broadcast:', await tron.broadcast({ signature: ['x'] }));
 
   // ===== FlashProvider (all methods, local stubs) =====
-  const flash = new LocalFlashProvider({ keystore: { filePath: tmpKeystorePath, password } });
+  const flash = new LocalFlashProvider({ keystore: { filePath: tmpKeystorePath } });
   await flash.init();
   console.log('[flash] signTx(message):', await flash.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') }));
   console.log('[flash] sign(tx):', await flash.sign({ txID: 'flash-tx' }));
