@@ -39,6 +39,19 @@ class TronProvider(BaseProvider):
         self.address: Optional[str] = None
         self.client: Optional[AsyncTron] = None
 
+        # Load missing credentials from keystore (already read by BaseProvider).
+        # Keystore keys used: privateKey, apiKey, rpcUrl
+        ks_private_key = self.keystore.get("privateKey")
+        ks_api_key = self.keystore.get("apiKey")
+        ks_rpc_url = self.keystore.get("rpcUrl")
+
+        if not self._private_key_hex and ks_private_key:
+            self._private_key_hex = ks_private_key
+        if not self._api_key and ks_api_key:
+            self._api_key = ks_api_key
+        if ks_rpc_url and ks_rpc_url != self._rpc_url:
+            self._rpc_url = ks_rpc_url
+
         self._build_client()
 
     def _build_client(self) -> None:
@@ -63,29 +76,8 @@ class TronProvider(BaseProvider):
             self.address = None
 
     async def init(self) -> "TronProvider":
-        """Load credentials from keystore, then rebuild client if new values found.
-        Keystore keys used: privateKey, apiKey, rpcUrl
-        """
+        """Compatibility no-op (credentials are loaded in constructor)."""
         await super().init()
-
-        ks_private_key = self.keystore.get("privateKey")
-        ks_api_key = self.keystore.get("apiKey")
-        ks_rpc_url = self.keystore.get("rpcUrl")
-
-        changed = False
-        if not self._private_key_hex and ks_private_key:
-            self._private_key_hex = ks_private_key
-            changed = True
-        if not self._api_key and ks_api_key:
-            self._api_key = ks_api_key
-            changed = True
-        if ks_rpc_url and ks_rpc_url != self._rpc_url:
-            self._rpc_url = ks_rpc_url
-            changed = True
-
-        if changed:
-            self._build_client()
-
         return self
 
     @classmethod

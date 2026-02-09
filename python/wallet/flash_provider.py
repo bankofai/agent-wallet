@@ -35,18 +35,8 @@ class FlashProvider(TronProvider):
         self.privy_app_secret = privy_app_secret or os.getenv("PRIVY_APP_SECRET")
         self.wallet_id = wallet_id or os.getenv("PRIVY_WALLET_ID")
 
-        if self.wallet_id:
-            self.address = self.wallet_id
-
-        if not self.privy_app_id or not self.privy_app_secret or not self.wallet_id:
-            print("Warning: Privy credentials (APP_ID, APP_SECRET, WALLET_ID) not fully provided.")
-
-    async def init(self) -> "FlashProvider":
-        """Load additional Privy credentials from keystore.
-        Keystore keys: privyAppId, privyAppSecret, walletId
-        """
-        await super().init()
-
+        # Load missing Privy credentials from keystore (already read by BaseProvider).
+        # Keystore keys: privyAppId, privyAppSecret, walletId
         ks_privy_app_id = self.keystore.get("privyAppId")
         ks_privy_app_secret = self.keystore.get("privyAppSecret")
         ks_wallet_id = self.keystore.get("walletId")
@@ -57,8 +47,16 @@ class FlashProvider(TronProvider):
             self.privy_app_secret = ks_privy_app_secret
         if not self.wallet_id and ks_wallet_id:
             self.wallet_id = ks_wallet_id
+
+        if self.wallet_id:
             self.address = self.wallet_id
 
+        if not self.privy_app_id or not self.privy_app_secret or not self.wallet_id:
+            print("Warning: Privy credentials (APP_ID, APP_SECRET, WALLET_ID) not fully provided.")
+
+    async def init(self) -> "FlashProvider":
+        """Compatibility no-op (credentials are loaded in constructor)."""
+        await super().init()
         return self
 
     @classmethod

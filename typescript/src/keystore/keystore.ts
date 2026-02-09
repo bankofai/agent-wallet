@@ -30,6 +30,14 @@ export abstract class KeystoreBase {
   abstract keys(): Promise<string[]>;
   abstract getAll(): Promise<KeystoreData>;
   abstract write(): Promise<void>;
+
+  /**
+   * Optional synchronous accessors.
+   * Providers may use these in constructors to read keystore-derived credentials.
+   * Custom keystore implementations can omit them.
+   */
+  getSync?(key: string): string | undefined;
+  getAllSync?(): KeystoreData;
 }
 
 /**
@@ -80,6 +88,23 @@ export class Keystore extends KeystoreBase {
     }
     this.loaded = true;
     logger.info({ filePath: this.filePath, keys: Object.keys(this.data).length }, 'keystore: read ok');
+    return { ...this.data };
+  }
+
+  /** Synchronous accessor: get value from the loaded snapshot. */
+  getSync(key: string): string | undefined {
+    if (!this.loaded) {
+      // `read()` performs synchronous I/O (no awaits), so this is effectively sync.
+      void this.read();
+    }
+    return this.data[key];
+  }
+
+  /** Synchronous accessor: get all entries from the loaded snapshot. */
+  getAllSync(): KeystoreData {
+    if (!this.loaded) {
+      void this.read();
+    }
     return { ...this.data };
   }
 

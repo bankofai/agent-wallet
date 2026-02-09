@@ -49,6 +49,28 @@ export class TronProvider extends BaseProvider {
     this._privateKey = opts.privateKey || process.env.TRON_PRIVATE_KEY || "";
     this._apiKey = opts.apiKey || process.env.TRON_GRID_API_KEY || "";
 
+    // Load missing credentials from keystore in constructor (best-effort).
+    // Works synchronously for the default file-based keystore.
+    if (typeof (this.keystore as any).getSync === "function") {
+      const ksPrivateKey = (this.keystore as any).getSync("privateKey") as
+        | string
+        | undefined;
+      const ksApiKey = (this.keystore as any).getSync("apiKey") as
+        | string
+        | undefined;
+      const ksRpcUrl = (this.keystore as any).getSync("rpcUrl") as
+        | string
+        | undefined;
+
+      if (!this._privateKey && ksPrivateKey) this._privateKey = ksPrivateKey;
+      if (!this._apiKey && ksApiKey) this._apiKey = ksApiKey;
+      if (ksRpcUrl && ksRpcUrl !== this._fullNode) {
+        this._fullNode = ksRpcUrl;
+        this._solidityNode = ksRpcUrl;
+        this._eventServer = ksRpcUrl;
+      }
+    }
+
     this._buildTronWeb();
   }
 
@@ -77,32 +99,9 @@ export class TronProvider extends BaseProvider {
    * Keystore keys used: privateKey, apiKey, rpcUrl
    */
   async init(): Promise<this> {
+    // Compatibility: constructor already loads credentials from keystore when possible.
+    // Still read again to support custom keystore implementations.
     await super.init();
-
-    const ksPrivateKey = await this.keystore.get("privateKey");
-    const ksApiKey = await this.keystore.get("apiKey");
-    const ksRpcUrl = await this.keystore.get("rpcUrl");
-
-    let changed = false;
-    if (!this._privateKey && ksPrivateKey) {
-      this._privateKey = ksPrivateKey;
-      changed = true;
-    }
-    if (!this._apiKey && ksApiKey) {
-      this._apiKey = ksApiKey;
-      changed = true;
-    }
-    if (ksRpcUrl && ksRpcUrl !== this._fullNode) {
-      this._fullNode = ksRpcUrl;
-      this._solidityNode = ksRpcUrl;
-      this._eventServer = ksRpcUrl;
-      changed = true;
-    }
-
-    if (changed) {
-      this._buildTronWeb();
-    }
-
     return this;
   }
 

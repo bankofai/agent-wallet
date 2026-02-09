@@ -24,13 +24,12 @@ npm run keystore -- write apiKey "tron-grid-api-key"
 ```ts
 import { TronProvider } from './src/wallet';
 
-// Provider holds a keystore instance in the constructor.
-// It only *reads* keystore data when you call `await init()`.
+// Keystore file initialization is done via CLI.
+// Providers read keystore data in the constructor.
 const tron = new TronProvider({
   privateKey: process.env.TRON_PRIVATE_KEY, // optional, overrides keystore/env
   apiKey: process.env.TRON_GRID_API_KEY,   // optional
 });
-await tron.init();
 
 const info = await tron.getAccountInfo(); // { address: 'T...' }
 const signed = await tron.signTx(unsignedTx);

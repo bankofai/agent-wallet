@@ -17,10 +17,12 @@ class BaseProvider(ABC):
         keystore: Optional[KeystoreBase] = None,
     ):
         self.keystore: KeystoreBase = keystore or Keystore(file_path=keystore_path)
+        # Keystore initialization (file creation) is handled by CLI.
+        # Providers only read existing keystore data.
+        self.keystore.read()
 
     async def init(self) -> "BaseProvider":
-        """Load keystore (constructors cannot be async)."""
-        self.keystore.read()
+        """Compatibility no-op (keystore is read in constructor)."""
         return self
 
     @abstractmethod

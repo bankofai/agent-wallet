@@ -6,8 +6,8 @@ import { logger } from '../logger';
  * Abstract base provider: compatible getAccountInfo and signTx.
  * Subclasses (TronProvider, FlashProvider) implement chain-specific logic.
  *
- * Each provider holds a Keystore instance. Call `init()` to load credentials
- * from keystore, or use the static `create()` factory on concrete providers.
+ * Keystore initialization (file creation) is handled by CLI.
+ * Providers read keystore data in the constructor.
  */
 export abstract class BaseProvider {
   /** Keystore instance for reading/writing account credentials. */
@@ -24,6 +24,10 @@ export abstract class BaseProvider {
     } else {
       this.keystore = new Keystore(keystore as KeystoreOptions | undefined);
     }
+
+    // Read keystore immediately. For the default file keystore this is effectively
+    // synchronous (no awaits), so providers can access credentials in constructors.
+    void this.keystore.read();
   }
 
   /**
@@ -32,15 +36,10 @@ export abstract class BaseProvider {
    * Must be called after construction (constructors cannot be async).
    */
   async init(): Promise<this> {
-    logger.debug(
-      { keystorePath: this.keystore.getPath() },
-      'provider keystore init: reading keystore',
-    );
+    // Compatibility: kept for older call sites.
+    // Re-reading is safe and supports custom keystore implementations.
+    logger.debug({ keystorePath: this.keystore.getPath() }, 'provider init: reading keystore');
     await this.keystore.read();
-    logger.debug(
-      { keystorePath: this.keystore.getPath() },
-      'provider keystore init: loaded',
-    );
     return this;
   }
 

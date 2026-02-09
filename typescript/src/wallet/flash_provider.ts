@@ -21,6 +21,16 @@ export class FlashProvider extends TronProvider {
     this.privyAppSecret = opts.privyAppSecret || process.env.PRIVY_APP_SECRET || '';
     this.walletId = opts.walletId || process.env.PRIVY_WALLET_ID || '';
 
+    // Load missing Privy credentials from keystore in constructor (best-effort).
+    if (typeof (this.keystore as any).getSync === 'function') {
+      const ksPrivyAppId = (this.keystore as any).getSync('privyAppId') as string | undefined;
+      const ksPrivyAppSecret = (this.keystore as any).getSync('privyAppSecret') as string | undefined;
+      const ksWalletId = (this.keystore as any).getSync('walletId') as string | undefined;
+      if (!this.privyAppId && ksPrivyAppId) this.privyAppId = ksPrivyAppId;
+      if (!this.privyAppSecret && ksPrivyAppSecret) this.privyAppSecret = ksPrivyAppSecret;
+      if (!this.walletId && ksWalletId) this.walletId = ksWalletId;
+    }
+
     if (this.walletId) {
       this.address = this.walletId;
     }
@@ -48,23 +58,9 @@ export class FlashProvider extends TronProvider {
    * Keystore keys: privyAppId, privyAppSecret, walletId
    */
   async init(): Promise<this> {
+    // Compatibility: constructor already loads credentials from keystore when possible.
+    // Still read again to support custom keystore implementations.
     await super.init();
-
-    const ksPrivyAppId = await this.keystore.get('privyAppId');
-    const ksPrivyAppSecret = await this.keystore.get('privyAppSecret');
-    const ksWalletId = await this.keystore.get('walletId');
-
-    if (!this.privyAppId && ksPrivyAppId) {
-      this.privyAppId = ksPrivyAppId;
-    }
-    if (!this.privyAppSecret && ksPrivyAppSecret) {
-      this.privyAppSecret = ksPrivyAppSecret;
-    }
-    if (!this.walletId && ksWalletId) {
-      this.walletId = ksWalletId;
-      this.address = this.walletId;
-    }
-
     return this;
   }
 
