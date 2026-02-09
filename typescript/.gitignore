@@ -4,4 +4,3 @@ dist/
 .env
 .keystore.json
 .keystore*.json
-package-lock.json
