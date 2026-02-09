@@ -1,9 +1,11 @@
 import { TronWeb } from 'tronweb';
 import * as dotenv from 'dotenv';
+import { BaseProvider } from './base_provider';
+import type { AccountInfo, SignedTxResult } from './types';
 
 dotenv.config();
 
-export class TronProvider {
+export class TronProvider extends BaseProvider {
     protected tronWeb: any; // TronWeb instance (using any due to potential type issues with v6)
     protected address: string | null = null;
 
@@ -21,6 +23,7 @@ export class TronProvider {
         privateKey: string = process.env.TRON_PRIVATE_KEY || '',
         apiKey: string = process.env.TRON_GRID_API_KEY || ''
     ) {
+        super();
         // TronWeb 6.x signature: fullNode, solidityNode, eventServer, privateKey
         // Or object: { fullHost: '...', privateKey: '...' }
         // Let's use the object format if possible or fallback to standard constructor
@@ -41,6 +44,26 @@ export class TronProvider {
         if (privateKey) {
             this.address = this.tronWeb.address.fromPrivateKey(privateKey);
         }
+    }
+
+    /**
+     * Get account info (wallet address). BaseProvider compatibility.
+     */
+    async getAccountInfo(): Promise<AccountInfo> {
+        if (!this.address) throw new Error('Address not available (no private key or wallet id)');
+        return { address: this.address };
+    }
+
+    /**
+     * Sign unsigned transaction and return signed result. BaseProvider compatibility.
+     */
+    async signTx(unsignedTx: unknown): Promise<SignedTxResult> {
+        const signed = await this.sign(unsignedTx as any);
+        const sig = (signed as any)?.signature?.[0];
+        return {
+            signedTx: signed,
+            signature: typeof sig === 'string' ? sig : undefined
+        };
     }
 
     /**

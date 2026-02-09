@@ -64,8 +64,24 @@ async def test_send_transaction(provider, mock_tron_client):
     mock_txn.sign.return_value = mock_signed_txn
 
     result = await provider.send_transaction("recipient_addr", 50.0)
-    
-    assert result['result'] is True
-    assert result['txid'] == '123'
-    # Verify chain calls
+
+    assert result["result"] is True
+    assert result["txid"] == "123"
     mock_tron_client.trx.transfer.assert_called_with(provider.address, "recipient_addr", 50.0)
+
+
+@pytest.mark.asyncio
+async def test_get_account_info(provider):
+    info = await provider.get_account_info()
+    assert info == {"address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"}
+
+
+@pytest.mark.asyncio
+async def test_sign_tx(provider):
+    mock_txn = MagicMock()
+    mock_signed = MagicMock()
+    mock_signed._signature = ["sig-hex"]
+    mock_txn.sign.return_value = mock_signed
+    result = await provider.sign_tx(mock_txn)
+    assert result["signed_tx"] is mock_signed
+    assert result["signature"] == "sig-hex"

@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "cryptography>=44.0.0",
     "httpx>=0.28.1",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",
@@ -12,3 +13,9 @@ dependencies = [
     "python-dotenv>=1.2.1",
     "tronpy>=0.6.2",
 ]
+
+[project.scripts]
+keystore = "keystore_cli:main"
+
+[tool.setuptools.packages.find]
+include = ["wallet", "keystore"]

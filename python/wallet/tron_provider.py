@@ -5,9 +5,13 @@ from tronpy.keys import PrivateKey
 from tronpy.providers import AsyncHTTPProvider
 from dotenv import load_dotenv
 
+from wallet.base_provider import BaseProvider
+from wallet.types import AccountInfo, SignedTxResult
+
 load_dotenv()
 
-class TronProvider:
+
+class TronProvider(BaseProvider):
     def __init__(self, rpc_url: Optional[str] = None, private_key: Optional[str] = None, api_key: Optional[str] = None):
         """
         Initialize the TronProvider with RPC URL, Private Key, and API Key.
@@ -37,6 +41,23 @@ class TronProvider:
         else:
             self._key = None
             self.address = None
+
+    async def get_account_info(self) -> AccountInfo:
+        """Get account info (wallet address). BaseProvider compatibility."""
+        if not self.address:
+            raise ValueError("Address not available (no private key or wallet id)")
+        return {"address": self.address}
+
+    async def sign_tx(self, unsigned_tx: Any) -> SignedTxResult:
+        """Sign unsigned transaction and return signed result. BaseProvider compatibility."""
+        signed = await self.sign_transaction(unsigned_tx)
+        sig = getattr(signed, "_signature", None) or getattr(signed, "signature", None)
+        if isinstance(sig, list) and len(sig) > 0:
+            raw_sig = sig[0]
+            signature = raw_sig if isinstance(raw_sig, str) else None
+        else:
+            signature = None
+        return {"signed_tx": signed, "signature": signature}
 
     async def get_balance(self, address: Optional[str] = None) -> float:
         """

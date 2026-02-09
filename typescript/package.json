@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "keystore": "node -r ts-node/register src/cli/keystore_cli.ts"
   },
   "keywords": [],
   "author": "",

@@ -96,5 +96,19 @@ describe('TronProvider', () => {
     expect(mockSign).toHaveBeenCalled();
     expect(mockSendRawTransaction).toHaveBeenCalledWith({ signed: true });
   });
+
+  it('should getAccountInfo return wallet address', async () => {
+    const info = await provider.getAccountInfo();
+    expect(info).toEqual({ address: 'T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb' });
+  });
+
+  it('should signTx sign and return signed result', async () => {
+    const unsignedTx = { txID: 'abc' };
+    mockSign.mockResolvedValue({ ...unsignedTx, signature: ['sig-hex'] });
+    const result = await provider.signTx(unsignedTx);
+    expect(mockSign).toHaveBeenCalledWith(unsignedTx);
+    expect(result.signedTx).toEqual({ txID: 'abc', signature: ['sig-hex'] });
+    expect(result.signature).toBe('sig-hex');
+  });
 });
 
