@@ -1,6 +1,6 @@
 # Agent Wallet SDK (Python)
 
-Aligned with the TypeScript SDK: Provider abstraction, Keystore, CLI, and encryption.
+Aligned with the TypeScript SDK: Provider abstraction, Keystore, CLI, and encryption. The keystore file is cross-language compatible — files written by TypeScript can be read by Python and vice versa.
 
 ## Provider abstraction
 
@@ -21,50 +21,58 @@ signed_tx = result["signed_tx"]
 
 ## Keystore
 
-A fixed-path JSON file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption. Payload format is compatible with the TypeScript keystore.
+A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption.
 
-- **Path**: Default `./.keystore.json`; override via `KEYSTORE_PATH` or the `file_path` argument.
-- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, the file is encrypted with AES-256-GCM (key derived via scrypt).
+- **Path**: Default `~/.agent_wallet/Keystore`; override via `KEYSTORE_PATH` env var or the `file_path` argument.
+- **Storage format**: Protobuf wire format (`map<string, string>`), NOT JSON.
+- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, protobuf bytes are base64-encoded and wrapped in an AES-256-GCM encrypted JSON payload (key derived via scrypt).
+- **Atomic writes**: All writes go through a `.tmp` file then `os.replace`, preventing data loss on crash.
+- **Backward compatible**: Can still read legacy plain-JSON keystore files.
 
 ```python
 from keystore import Keystore
 
-ks = Keystore(file_path="./.keystore.json", password="secret")
+ks = Keystore(password="secret")  # defaults to ~/.agent_wallet/Keystore
 ks.read()
 private_key = ks.get("privateKey")
-ks.set("apiKey", "xxx")
+ks.set("apiKey", "xxx")  # loads existing data first if not yet loaded
 ks.write()
 
-# Static methods
-data = Keystore.from_file("./.keystore.json", "secret")
-Keystore.to_file("./out.json", {"privateKey": "abc"}, "secret")
+# Static helpers
+data = Keystore.from_file(os.path.expanduser("~/.agent_wallet/Keystore"), "secret")
+Keystore.to_file("/path/to/Keystore", {"privateKey": "abc"}, "secret")
 ```
 
 ## Keystore CLI
 
+Default path is `~/.agent_wallet/Keystore` (same as the library).
+
 ```bash
 # From the python directory
-uv run python -m keystore_cli read [key]
-uv run python -m keystore_cli write <key> <value>
-uv run python -m keystore_cli delete <key>
-uv run python -m keystore_cli init
+python -m keystore_cli read [key]
+python -m keystore_cli write <key> <value>
+python -m keystore_cli delete <key>
+python -m keystore_cli init
 
 # After install, run directly
 keystore read
 keystore write privateKey "hex..."
 
-# Optional
---path ./my.json
+# Options
+--path /custom/path
 --password xxx  or  KEYSTORE_PASSWORD=xxx
 ```
 
 ## Encryption
 
-- Without a password, the keystore file is plain JSON.
-- With a password, the file is stored as an encrypted payload `{ version, salt, iv, tag, data }` (scrypt + AES-256-GCM); you can read and write the same file from both TypeScript and Python.
+- **Without a password**: keystore is stored as raw protobuf binary.
+- **With a password**: protobuf bytes are base64-encoded, then encrypted with scrypt + AES-256-GCM and stored as `{ version, salt, iv, tag, data }`. The same password is required to decrypt on read.
+- Salt, IV, and tag lengths are validated on decrypt.
 
 ## Tests
 
 ```bash
 uv run pytest
+# or
+python -m pytest tests/ -v
 ```

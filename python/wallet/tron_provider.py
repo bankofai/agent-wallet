@@ -34,8 +34,8 @@ class TronProvider(BaseProvider):
             try:
                 self._key = PrivateKey(bytes.fromhex(self._private_key_hex))
                 self.address = self._key.public_key.to_base58check_address()
-            except Exception as e:
-                print(f"Warning: Invalid private key provided: {e}")
+            except Exception:
+                print("Warning: Invalid private key provided")
                 self._key = None
                 self.address = None
         else:

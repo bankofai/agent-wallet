@@ -98,10 +98,9 @@ class FlashProvider(TronProvider):
             # But tronpy expects signatures to be added via .sign method which uses keys.
             # We have to manually append signature.
             
-            # Placeholder for actual signature insertion:
-            if 'signature' in data:
-                 transaction._signature = [data['signature']]
-            
+            if 'signature' not in data:
+                raise ValueError("Privy signing response did not contain a signature")
+            transaction._signature = [data['signature']]
             return transaction
 
     def _get_basic_auth(self) -> str:
@@ -109,19 +108,20 @@ class FlashProvider(TronProvider):
         creds = f"{self.privy_app_id}:{self.privy_app_secret}"
         return base64.b64encode(creds.encode()).decode()
 
-    async def send_transaction(self, to_address: str, amount: float, priority_fee: int = 1000) -> dict:
+    async def send_transaction(self, to_address: str, amount: float) -> dict:
         """
         Send a flash transaction using Privy signing, overriding standard send_transaction.
         :param to_address: Recipient address
         :param amount: Amount in TRX
-        :param priority_fee: Additional fee in SUN to prioritize transaction
         :return: Transaction result
         """
+        if not self.address:
+            raise ValueError("Address not available for signing")
         # Create transaction
         txn = (
             self.client.trx.transfer(self.address, to_address, amount)
             .memo("Privy Flash Transaction")
-            .fee_limit(100_000_000 + priority_fee) 
+            .fee_limit(100_000_000)
         )
         txn = await txn.build()
         

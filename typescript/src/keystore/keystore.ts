@@ -1,17 +1,19 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { encrypt, decrypt, isEncryptedPayload, type EncryptedPayload } from './keystore_crypto';
+import { encodeKeystoreData, decodeKeystoreData } from './keystore_proto';
 
-/** Default keystore filename in current directory */
-export const DEFAULT_KEYSTORE_FILENAME = '.keystore.json';
+/** Default keystore filename under the user's home directory */
+export const DEFAULT_KEYSTORE_FILENAME = 'Keystore';
 
 /** Account fields commonly stored (privateKey, apiKey, secretKey, address, etc.) */
 export type KeystoreData = Record<string, string>;
 
-const DEFAULT_PATH = path.join(process.cwd(), DEFAULT_KEYSTORE_FILENAME);
+const DEFAULT_PATH = path.join(os.homedir(), '.agent_wallet', DEFAULT_KEYSTORE_FILENAME);
 
 export interface KeystoreOptions {
-  /** Full path to keystore JSON file. Default: cwd + .keystore.json */
+  /** Full path to keystore file. Default: ~/.agent_wallet/Keystore */
   filePath?: string;
   /** If set, file is encrypted with this password */
   password?: string;
@@ -37,26 +39,52 @@ export class Keystore {
     return this.filePath;
   }
 
-  /** Read from file (decrypt if password was set). Idempotent. */
+  /** Read from file (decrypt if password was set). Supports legacy JSON and new protobuf format. */
   async read(): Promise<KeystoreData> {
     if (!fs.existsSync(this.filePath)) {
       this.data = {};
       this.loaded = true;
       return this.data;
     }
-    const raw = fs.readFileSync(this.filePath, 'utf8');
-    const parsed = JSON.parse(raw) as unknown;
-    if (isEncryptedPayload(parsed)) {
+    const rawBuf = fs.readFileSync(this.filePath);
+
+    // Try JSON first (encrypted or legacy plaintext)
+    let parsed: unknown;
+    let parsedAsJson = false;
+    try {
+      const txt = rawBuf.toString('utf8');
+      parsed = JSON.parse(txt) as unknown;
+      parsedAsJson = true;
+    } catch {
+      parsedAsJson = false;
+    }
+
+    if (parsedAsJson && isEncryptedPayload(parsed)) {
       if (!this.password) {
         throw new Error('Keystore is encrypted but no password provided (KEYSTORE_PASSWORD or options.password)');
       }
       const plain = await decrypt(parsed as EncryptedPayload, this.password);
-      this.data = JSON.parse(plain) as KeystoreData;
+      // Backwards compatibility: plaintext may be JSON or base64-encoded protobuf
+      try {
+        const maybeJson = JSON.parse(plain) as unknown;
+        if (maybeJson && typeof maybeJson === 'object' && !Array.isArray(maybeJson)) {
+          this.data = maybeJson as KeystoreData;
+        } else {
+          throw new Error('not plain object');
+        }
+      } catch {
+        const buf = Buffer.from(plain, 'base64');
+        this.data = decodeKeystoreData(buf);
+      }
+    } else if (parsedAsJson && parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      // Legacy unencrypted JSON format
+      this.data = parsed as KeystoreData;
     } else {
-      this.data = (parsed as KeystoreData) || {};
+      // New protobuf binary format
+      this.data = decodeKeystoreData(rawBuf);
     }
     this.loaded = true;
-    return this.data;
+    return { ...this.data };
   }
 
   /** Ensure data is loaded; throw if file missing and not yet written. */
@@ -72,10 +100,10 @@ export class Keystore {
     return this.data[key];
   }
 
-  /** Set a value by key. Does not persist until write() is called. */
-  set(key: string, value: string): void {
+  /** Set a value by key. Loads existing data first if not yet loaded. Does not persist until write() is called. */
+  async set(key: string, value: string): Promise<void> {
+    await this.ensureLoaded();
     this.data[key] = value;
-    if (!this.loaded) this.loaded = true;
   }
 
   /** Get all keys. */
@@ -90,19 +118,23 @@ export class Keystore {
     return { ...this.data };
   }
 
-  /** Write current data to file (encrypt if password is set). */
+  /** Write current data to file (encrypt if password is set) using protobuf storage. Atomic via tmp+rename. */
   async write(): Promise<void> {
     const dir = path.dirname(this.filePath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    const json = JSON.stringify(this.data, null, 2);
+    const tmpPath = this.filePath + '.tmp';
+    const protoBuf = encodeKeystoreData(this.data);
     if (this.password) {
-      const payload = await encrypt(json, this.password);
-      fs.writeFileSync(this.filePath, JSON.stringify(payload, null, 2), 'utf8');
+      // Encrypt base64-encoded protobuf bytes for cross-language compatibility
+      const plaintext = protoBuf.toString('base64');
+      const payload = await encrypt(plaintext, this.password);
+      fs.writeFileSync(tmpPath, JSON.stringify(payload, null, 2), 'utf8');
     } else {
-      fs.writeFileSync(this.filePath, json, 'utf8');
+      fs.writeFileSync(tmpPath, protoBuf);
     }
+    fs.renameSync(tmpPath, this.filePath);
   }
 
   /** Load from a different path (one-time read). */

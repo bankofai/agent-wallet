@@ -37,7 +37,7 @@ Commands:
     )
     parser.add_argument(
         "--path",
-        default=os.environ.get("KEYSTORE_PATH", str(Path.cwd() / ".keystore.json")),
+        default=os.environ.get("KEYSTORE_PATH", str(Path.home() / ".agent_wallet" / "Keystore")),
         help="Keystore file path",
     )
     parser.add_argument(

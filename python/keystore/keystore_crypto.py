@@ -50,14 +50,14 @@ def decrypt(payload: dict[str, Any], password: str) -> str:
     salt = bytes.fromhex(payload["salt"])
     iv = bytes.fromhex(payload["iv"])
     tag = bytes.fromhex(payload["tag"])
-    data_raw = payload["data"]
-    if isinstance(data_raw, str):
-        if len(data_raw) % 2 == 0 and all(c in "0123456789abcdefABCDEF" for c in data_raw):
-            ciphertext_only = bytes.fromhex(data_raw)
-        else:
-            ciphertext_only = base64.b64decode(data_raw)
-    else:
-        ciphertext_only = data_raw
+    if len(salt) != SALT_LEN:
+        raise ValueError(f"Invalid salt length: expected {SALT_LEN}, got {len(salt)}")
+    if len(iv) != IV_LEN:
+        raise ValueError(f"Invalid iv length: expected {IV_LEN}, got {len(iv)}")
+    if len(tag) != TAG_LEN:
+        raise ValueError(f"Invalid tag length: expected {TAG_LEN}, got {len(tag)}")
+    # Always decode data as base64 (matches TypeScript encrypt which always outputs base64)
+    ciphertext_only = base64.b64decode(payload["data"])
     ciphertext = ciphertext_only + tag
     key = _derive_key(password, salt)
     aes = AESGCM(key)

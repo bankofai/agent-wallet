@@ -63,7 +63,7 @@ export class FlashProvider extends TronProvider {
     const txID = transaction.txID;
 
     // Prepare Privy API call
-    const url = `https://auth.privy.io/api/v1/wallets/${this.walletId}/sign`;
+    const url = `https://auth.privy.io/api/v1/wallets/${encodeURIComponent(this.walletId)}/sign`;
     const auth = btoa(`${this.privyAppId}:${this.privyAppSecret}`);
 
     const response = await fetch(url, {
@@ -83,22 +83,25 @@ export class FlashProvider extends TronProvider {
     });
 
     if (!response.ok) {
-      throw new Error(`Privy signing failed: ${response.statusText}`);
+      const errBody = await response.text().catch(() => '');
+      throw new Error(`Privy signing failed (${response.status}): ${errBody || response.statusText}`);
     }
 
     const data = await response.json();
     const signature = data.signature;
 
-    // Add signature to transaction
-    if (signature) {
-      // TronWeb transaction structure usually has signature array
-      if (!transaction.signature) {
-        transaction.signature = [];
-      }
-      transaction.signature.push(signature);
+    if (!signature) {
+      throw new Error('Privy signing response did not contain a signature');
     }
 
-    return transaction;
+    // Clone transaction to avoid mutating the original
+    const signedTx = JSON.parse(JSON.stringify(transaction));
+    if (!signedTx.signature) {
+      signedTx.signature = [];
+    }
+    signedTx.signature.push(signature);
+
+    return signedTx;
   }
 
   /**
@@ -107,7 +110,8 @@ export class FlashProvider extends TronProvider {
    * @param amount Amount in SUN
    * @param priorityFee Additional fee limit in SUN
    */
-  async sendTransaction(toAddress: string, amount: number, priorityFee: number = 1000): Promise<any> {
+  async sendTransaction(toAddress: string, amount: number): Promise<any> {
+    if (!this.address) throw new Error("Address not available for signing");
     // Use flashTronWeb for broadcasting
     try {
       // Build transaction

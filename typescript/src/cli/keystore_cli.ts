@@ -29,7 +29,7 @@ function hasFlag(name: string): boolean {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const filePath = getArg('--path') ?? path.join(process.cwd(), '.keystore.json');
+  const filePath = getArg('--path') ?? process.env.KEYSTORE_PATH ?? path.join(require('os').homedir(), '.agent_wallet', 'Keystore');
   const password = getArg('--password') ?? process.env.KEYSTORE_PASSWORD;
 
   const args: string[] = [];
@@ -85,12 +85,12 @@ Options:
     if (cmd === 'write') {
       const key = args[1];
       const value = args.slice(2).join(' ').replace(/^["']|["']$/g, '');
-      if (!key) {
+      if (!key || args.length < 3) {
         console.error('Usage: write <key> <value>');
         process.exit(1);
       }
       await keystore.read();
-      keystore.set(key, value);
+      await keystore.set(key, value);
       await keystore.write();
       console.log(`Written: ${key}`);
       return;

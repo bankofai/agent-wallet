@@ -18,42 +18,48 @@ const { signedTx } = await tron.signTx(unsignedTx);
 
 ## Keystore
 
-A fixed-path JSON file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption.
+A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption. The storage format is cross-language compatible with the Python SDK.
 
-- **Path**: Default `./.keystore.json`; override via `KEYSTORE_PATH` or the `filePath` option.
-- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, the file is encrypted with AES-256-GCM (key derived via scrypt).
+- **Path**: Default `~/.agent_wallet/Keystore`; override via `KEYSTORE_PATH` env var or the `filePath` option.
+- **Storage format**: Protobuf wire format (`map<string, string>`), NOT JSON.
+- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, protobuf bytes are base64-encoded and wrapped in an AES-256-GCM encrypted JSON payload (key derived via scrypt).
+- **Atomic writes**: All writes go through a `.tmp` file then `rename`, preventing data loss on crash.
+- **Backward compatible**: Can still read legacy plain-JSON keystore files.
 
 ```ts
 import { Keystore } from './src/keystore';
 
-const ks = new Keystore({ filePath: './.keystore.json', password: 'secret' });
+const ks = new Keystore({ password: 'secret' }); // defaults to ~/.agent_wallet/Keystore
 await ks.read();
 const privateKey = await ks.get('privateKey');
-ks.set('apiKey', 'xxx');
+await ks.set('apiKey', 'xxx');  // note: set() is async — loads existing data first if needed
 await ks.write();
 
-// Static methods
-const data = await Keystore.fromFile('./.keystore.json', 'secret');
-await Keystore.toFile('./out.json', { privateKey: 'abc' }, 'secret');
+// Static helpers
+const data = await Keystore.fromFile('/path/to/Keystore', 'secret');
+await Keystore.toFile('/path/to/Keystore', { privateKey: 'abc' }, 'secret');
 ```
 
 ## Keystore CLI
 
+Default path is `~/.agent_wallet/Keystore` (same as the library).
+
 ```bash
 npm run keystore -- read [key]           # read one key or all
-npm run keystore -- write <key> <value>  # write one key
+npm run keystore -- write <key> <value>  # write one key-value pair
 npm run keystore -- delete <key>         # delete one key
 npm run keystore -- init                 # create empty keystore
 
-# Optional
-npm run keystore -- --path ./my.json read
+# Options
+npm run keystore -- --path /custom/path read
 KEYSTORE_PASSWORD=xxx npm run keystore -- write privateKey "hex..."
 ```
 
 ## Encryption
 
-- Without a password, the keystore file is plain JSON.
-- With a password, the file is stored as an encrypted payload `{ version, salt, iv, tag, data }` (scrypt + AES-256-GCM); the same password is required to decrypt on read.
+- **Without a password**: keystore is stored as raw protobuf binary.
+- **With a password**: protobuf bytes are base64-encoded, then encrypted with scrypt + AES-256-GCM and stored as `{ version, salt, iv, tag, data }`. The same password is required to decrypt on read.
+- Salt, IV, and tag lengths are validated on decrypt.
 
 ## Tests
 

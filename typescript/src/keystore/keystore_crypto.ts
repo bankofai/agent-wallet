@@ -52,13 +52,15 @@ export async function encrypt(plaintext: string, password: string): Promise<Encr
  * Decrypt payload with password. Returns plaintext string.
  */
 export async function decrypt(payload: EncryptedPayload, password: string): Promise<string> {
-  const key = await deriveKey(password, Buffer.from(payload.salt, 'hex'));
-  const decipher = crypto.createDecipheriv(
-    ALGORITHM,
-    key,
-    Buffer.from(payload.iv, 'hex')
-  );
-  decipher.setAuthTag(Buffer.from(payload.tag, 'hex'));
+  const salt = Buffer.from(payload.salt, 'hex');
+  const iv = Buffer.from(payload.iv, 'hex');
+  const tag = Buffer.from(payload.tag, 'hex');
+  if (salt.length !== SALT_LEN) throw new Error(`Invalid salt length: expected ${SALT_LEN}, got ${salt.length}`);
+  if (iv.length !== IV_LEN) throw new Error(`Invalid iv length: expected ${IV_LEN}, got ${iv.length}`);
+  if (tag.length !== TAG_LEN) throw new Error(`Invalid tag length: expected ${TAG_LEN}, got ${tag.length}`);
+  const key = await deriveKey(password, salt);
+  const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(tag);
   return decipher.update(payload.data, 'base64', 'utf8') + decipher.final('utf8');
 }
 
