@@ -1,8 +1,13 @@
-"""Abstract base provider: compatible get_account_info and sign_tx."""
+"""Abstract base provider: compatible get_account_info and sign_tx.
+
+Each provider holds a Keystore instance. Call `init()` to load credentials
+from keystore, or use the classmethod `create()` for one-step setup.
+"""
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional
 
 from wallet.types import AccountInfo, SignedTxResult
+from keystore.keystore import Keystore
 
 
 class BaseProvider(ABC):
@@ -10,6 +15,20 @@ class BaseProvider(ABC):
     Abstract base provider. Subclasses (TronProvider, FlashProvider) implement
     chain-specific logic.
     """
+
+    def __init__(
+        self,
+        keystore_path: Optional[str] = None,
+        keystore_password: Optional[str] = None,
+    ):
+        self.keystore = Keystore(file_path=keystore_path, password=keystore_password)
+
+    async def init(self) -> "BaseProvider":
+        """Load credentials from keystore. Subclasses override to populate
+        chain-specific fields (private_key, api_key, etc.) from keystore data.
+        """
+        self.keystore.read()
+        return self
 
     @abstractmethod
     async def get_account_info(self) -> AccountInfo:

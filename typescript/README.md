@@ -11,9 +11,29 @@
 ```ts
 import { TronProvider, FlashProvider } from './src/wallet';
 
-const tron = new TronProvider(undefined, undefined, undefined, process.env.TRON_PRIVATE_KEY);
+// Load credentials from env, constructor options and keystore (~/.agent_wallet/Keystore)
+const tron = await TronProvider.create({
+  privateKey: process.env.TRON_PRIVATE_KEY,   // optional, overrides keystore/env
+  apiKey: process.env.TRON_GRID_API_KEY,     // optional
+  keystore: {
+    password: process.env.KEYSTORE_PASSWORD, // optional encryption password
+  },
+});
+
 const info = await tron.getAccountInfo();  // { address: 'T...' }
 const { signedTx } = await tron.signTx(unsignedTx);
+```
+
+`FlashProvider` works the same way, but additionally loads Privy credentials from keystore:
+
+```ts
+const flash = await FlashProvider.create({
+  keystore: { password: process.env.KEYSTORE_PASSWORD },
+  // Optionally override values that might also live in the keystore:
+  privyAppId: process.env.PRIVY_APP_ID,
+  privyAppSecret: process.env.PRIVY_APP_SECRET,
+  walletId: process.env.PRIVY_WALLET_ID,
+});
 ```
 
 ## Keystore

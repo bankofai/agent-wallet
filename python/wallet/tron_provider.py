@@ -12,24 +12,39 @@ load_dotenv()
 
 
 class TronProvider(BaseProvider):
-    def __init__(self, rpc_url: Optional[str] = None, private_key: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        rpc_url: Optional[str] = None,
+        private_key: Optional[str] = None,
+        api_key: Optional[str] = None,
+        keystore_path: Optional[str] = None,
+        keystore_password: Optional[str] = None,
+    ):
         """
-        Initialize the TronProvider with RPC URL, Private Key, and API Key.
-        :param rpc_url: URL of the TRON RPC node (default: from env or Trongrid)
-        :param private_key: Private key in hex format (default: from env)
-        :param api_key: TronGrid API Key (default: from env)
+        Initialize the TronProvider.
+        After construction, call `await init()` to load credentials from keystore.
+        Or use `await TronProvider.create(...)` for one-step setup.
         """
-        self.rpc_url = rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
-        self._private_key_hex = private_key or getenv("TRON_PRIVATE_KEY")
-        self.api_key = api_key or getenv("TRON_GRID_API_KEY")
-        
-        if self.api_key:
-            provider = AsyncHTTPProvider(self.rpc_url, api_key=self.api_key)
+        super().__init__(keystore_path=keystore_path, keystore_password=keystore_password)
+
+        self._rpc_url = rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
+        self._private_key_hex: Optional[str] = private_key or getenv("TRON_PRIVATE_KEY")
+        self._api_key: Optional[str] = api_key or getenv("TRON_GRID_API_KEY")
+        self._key: Optional[PrivateKey] = None
+        self.address: Optional[str] = None
+        self.client: Optional[AsyncTron] = None
+
+        self._build_client()
+
+    def _build_client(self) -> None:
+        """Build / rebuild the Tron client from current credentials."""
+        if self._api_key:
+            provider = AsyncHTTPProvider(self._rpc_url, api_key=self._api_key)
         else:
-            provider = AsyncHTTPProvider(self.rpc_url)
-            
+            provider = AsyncHTTPProvider(self._rpc_url)
+
         self.client = AsyncTron(provider=provider)
-        
+
         if self._private_key_hex:
             try:
                 self._key = PrivateKey(bytes.fromhex(self._private_key_hex))
@@ -41,6 +56,52 @@ class TronProvider(BaseProvider):
         else:
             self._key = None
             self.address = None
+
+    async def init(self) -> "TronProvider":
+        """Load credentials from keystore, then rebuild client if new values found.
+        Keystore keys used: privateKey, apiKey, rpcUrl
+        """
+        await super().init()
+
+        ks_private_key = self.keystore.get("privateKey")
+        ks_api_key = self.keystore.get("apiKey")
+        ks_rpc_url = self.keystore.get("rpcUrl")
+
+        changed = False
+        if not self._private_key_hex and ks_private_key:
+            self._private_key_hex = ks_private_key
+            changed = True
+        if not self._api_key and ks_api_key:
+            self._api_key = ks_api_key
+            changed = True
+        if ks_rpc_url and ks_rpc_url != self._rpc_url:
+            self._rpc_url = ks_rpc_url
+            changed = True
+
+        if changed:
+            self._build_client()
+
+        return self
+
+    @classmethod
+    async def create(
+        cls,
+        rpc_url: Optional[str] = None,
+        private_key: Optional[str] = None,
+        api_key: Optional[str] = None,
+        keystore_path: Optional[str] = None,
+        keystore_password: Optional[str] = None,
+    ) -> "TronProvider":
+        """Factory: create and init a TronProvider in one step."""
+        provider = cls(
+            rpc_url=rpc_url,
+            private_key=private_key,
+            api_key=api_key,
+            keystore_path=keystore_path,
+            keystore_password=keystore_password,
+        )
+        await provider.init()
+        return provider
 
     async def get_account_info(self) -> AccountInfo:
         """Get account info (wallet address). BaseProvider compatibility."""
@@ -60,68 +121,37 @@ class TronProvider(BaseProvider):
         return {"signed_tx": signed, "signature": signature}
 
     async def get_balance(self, address: Optional[str] = None) -> float:
-        """
-        Get TRX balance of an address.
-        :param address: Address to check (default: self.address)
-        :return: Balance in TRX (float)
-        """
+        """Get TRX balance of an address."""
         addr = address or self.address
         if not addr:
             raise ValueError("Address not provided")
-        # get_account_balance returns balance in SUN (integer)? No, tronpy usually returns Decimal or float.
-        # Actually standard tronpy returns Decimal. Let's return float.
         balance = await self.client.get_account_balance(addr)
         return float(balance)
 
     async def get_trc20_balance(self, wallet_address: str, contract_address: str) -> int:
-        """
-        Get TRC20 token balance using contract call.
-        :param wallet_address: Address holding the tokens
-        :param contract_address: Address of the TRC20 contract
-        :return: Balance in smallest unit (raw integer)
-        """
+        """Get TRC20 token balance."""
         contract = await self.client.get_contract(contract_address)
-        # Assuming standard ERC20/TRC20 balanceOf method
         balance = await contract.functions.balanceOf(wallet_address)
         return int(balance)
 
     async def send_transaction(self, to_address: str, amount: float) -> dict:
-        """
-        Send TRX to an address.
-        :param to_address: Recipient address
-        :param amount: Amount in TRX
-        :return: Transaction result dict
-        """
-
-        
-        # build transaction
+        """Send TRX to an address."""
         txn = (
             self.client.trx.transfer(self.address, to_address, amount)
             .memo("Powered by Agent Wallet")
             .fee_limit(100_000_000)
         )
-        # build is async in AsyncTron
         txn = await txn.build()
-        # sign
         signed_txn = await self.sign_transaction(txn)
-        # broadcast
         result = await signed_txn.broadcast()
         return result
 
     async def sign_transaction(self, transaction: Any) -> Any:
-        """
-        Sign a transaction object.
-        :param transaction: Transaction object (from tronpy)
-        :return: Signed transaction object
-        """
+        """Sign a transaction object."""
         if not self._key:
             raise ValueError("Private key not provided for signing")
         return transaction.sign(self._key)
 
     async def broadcast_transaction(self, signed_transaction: Any) -> dict:
-        """
-        Broadcast a signed transaction.
-        :param signed_transaction: Signed transaction object
-        :return: Broadcast result
-        """
+        """Broadcast a signed transaction."""
         return await signed_transaction.broadcast()

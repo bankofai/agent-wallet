@@ -47,7 +47,12 @@ describe('TronProvider', () => {
     mockFromPrivateKey.mockReturnValue('T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb');
     mockSendTrx.mockResolvedValue({});
 
-    provider = new TronProvider('http://fullnode', 'http://solidity', 'http://event', 'privatekey');
+    provider = new TronProvider({
+      fullNode: 'http://fullnode',
+      solidityNode: 'http://solidity',
+      eventServer: 'http://event',
+      privateKey: 'privatekey',
+    });
   });
 
   it('should initialize correctly', () => {
@@ -57,7 +62,13 @@ describe('TronProvider', () => {
 
   it('should initialize with API key', () => {
     jest.clearAllMocks();
-    new TronProvider('http://fullnode', 'http://solidity', 'http://event', 'privatekey', 'my-api-key');
+    new TronProvider({
+      fullNode: 'http://fullnode',
+      solidityNode: 'http://solidity',
+      eventServer: 'http://event',
+      privateKey: 'privatekey',
+      apiKey: 'my-api-key',
+    });
     expect(TronWeb).toHaveBeenCalledWith(expect.objectContaining({
       headers: { "TRON-PRO-API-KEY": 'my-api-key' }
     }));
