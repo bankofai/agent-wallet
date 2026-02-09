@@ -105,6 +105,8 @@ class TronProvider(BaseProvider):
         """Sync helper for message signing."""
         if not self._key:
             raise ValueError("Private key not provided for signing")
+        # Design: sign_message expects a 32-byte message hash.
+        # tronpy's sign_msg_hash() requires a 32-byte input.
         sig = self._key.sign_msg_hash(message)
         return sig.hex()
 
