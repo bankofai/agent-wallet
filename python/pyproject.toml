@@ -19,4 +19,4 @@ dependencies = [
 keystore = "keystore_cli:main"
 
 [tool.setuptools.packages.find]
-include = ["wallet", "keystore"]
+include = ["wallet", "keystore","common"]

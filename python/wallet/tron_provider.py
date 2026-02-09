@@ -15,8 +15,10 @@ load_dotenv()
 class TronProvider(BaseProvider):
     def __init__(
         self,
+        rpc_url: Optional[str] = None,
+        # Backward-compatible alias; prefer `rpc_url`.
         trongrid_rpc_url: Optional[str] = None,
-        private_key: Optional[str] = None,# TODO: delete
+        private_key: Optional[str] = None,
         api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore_password: Optional[str] = None,
@@ -33,7 +35,7 @@ class TronProvider(BaseProvider):
             keystore=keystore,
         )
 
-        self._rpc_url = trongrid_rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
+        self._rpc_url = rpc_url or trongrid_rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
         self._private_key_hex: Optional[str] = private_key or getenv("TRON_PRIVATE_KEY")
         self._api_key: Optional[str] = api_key or getenv("TRON_GRID_API_KEY")
         self._key: Optional[PrivateKey] = None

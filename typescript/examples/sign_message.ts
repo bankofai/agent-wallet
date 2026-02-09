@@ -21,12 +21,13 @@ async function main(): Promise<void> {
   if (!message) usage();
   if (encoding !== 'utf8' && encoding !== 'hex') usage();
 
-  const provider = await TronProvider.create({
-    // All of these are optional; provider will also load from env + keystore
+  const provider = new TronProvider({
+    // All of these are optional; provider can load from env + keystore
     privateKey: process.env.TRON_PRIVATE_KEY,
     apiKey: process.env.TRON_GRID_API_KEY,
     keystore: { password: process.env.KEYSTORE_PASSWORD },
   });
+  await provider.init(); // loads credentials from keystore if needed
 
   const res = await provider.signTx({ type: 'message', message, encoding });
   // eslint-disable-next-line no-console

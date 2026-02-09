@@ -14,13 +14,15 @@ Aligned with the TypeScript SDK: Provider abstraction, Keystore, CLI, and encryp
 ```python
 from wallet import TronProvider, FlashProvider
 
-# Load credentials from env, constructor args and keystore (~/.agent_wallet/Keystore)
-tron = await TronProvider.create(
+# Keystore file initialization is done via the keystore CLI.
+# Providers only *read* keystore data when you call `await init()`.
+tron = TronProvider(
     private_key=os.getenv("TRON_PRIVATE_KEY"),   # optional, overrides keystore/env
     api_key=os.getenv("TRON_GRID_API_KEY"),      # optional
     keystore_path=os.getenv("KEYSTORE_PATH"),    # optional custom path
     keystore_password=os.getenv("KEYSTORE_PASSWORD"),
 )
+await tron.init()
 
 info = await tron.get_account_info()   # {"address": "T..."}
 result = await tron.sign_tx(unsigned_tx)
@@ -30,7 +32,7 @@ signed_tx = result["signed_tx"]
 `FlashProvider` works the same way, and can also pull Privy credentials from the keystore:
 
 ```python
-flash = await FlashProvider.create(
+flash = FlashProvider(
     rpc_url=os.getenv("TRON_RPC_URL"),
     keystore_password=os.getenv("KEYSTORE_PASSWORD"),
     # Optionally override values that might also live in the keystore:
@@ -38,6 +40,7 @@ flash = await FlashProvider.create(
     privy_app_secret=os.getenv("PRIVY_APP_SECRET"),
     wallet_id=os.getenv("PRIVY_WALLET_ID"),
 )
+await flash.init()
 ```
 
 ## Keystore
