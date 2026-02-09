@@ -28,7 +28,6 @@ def provider(mock_tron_client):
                 },
             )
             p = FlashProvider(
-                rpc_url="http://mock",
                 keystore_path=fp,
             )
             p.client = mock_tron_client

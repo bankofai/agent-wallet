@@ -6,10 +6,9 @@ import type { KeystoreOptions, KeystoreBase } from "../keystore";
 
 dotenv.config();
 
+const DEFAULT_TRON_RPC_URL = "https://api.trongrid.io";
+
 export interface TronProviderOptions {
-  fullNode?: string;
-  solidityNode?: string;
-  eventServer?: string;
   privateKey?: string;
   /** Keystore options or a custom keystore implementation. */
   keystore?: KeystoreOptions | KeystoreBase;
@@ -31,14 +30,10 @@ export class TronProvider extends BaseProvider {
   constructor(opts: TronProviderOptions = {}) {
     super(opts.keystore);
 
-    this._fullNode =
-      opts.fullNode || process.env.TRON_RPC_URL || "https://api.trongrid.io";
-    this._solidityNode =
-      opts.solidityNode ||
-      process.env.TRON_RPC_URL ||
-      "https://api.trongrid.io";
-    this._eventServer =
-      opts.eventServer || process.env.TRON_RPC_URL || "https://api.trongrid.io";
+    // RPC URL is fixed for TronProvider (not configurable).
+    this._fullNode = DEFAULT_TRON_RPC_URL;
+    this._solidityNode = DEFAULT_TRON_RPC_URL;
+    this._eventServer = DEFAULT_TRON_RPC_URL;
     // privateKey comes from keystore (or explicit opts), not from env.
     this._privateKey = opts.privateKey || "";
 

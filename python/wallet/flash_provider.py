@@ -10,7 +10,6 @@ import json
 class FlashProvider(TronProvider):
     def __init__(
         self,
-        rpc_url: Optional[str] = None,
         privy_app_id: Optional[str] = None,
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
@@ -19,7 +18,6 @@ class FlashProvider(TronProvider):
     ):
         """Initialize FlashProvider with Privy integration (credentials are read from keystore in constructor)."""
         super().__init__(
-            rpc_url=rpc_url,
             private_key=None,
             keystore_path=keystore_path,
             keystore=keystore,
@@ -57,7 +55,6 @@ class FlashProvider(TronProvider):
     @classmethod
     async def create(
         cls,
-        rpc_url: Optional[str] = None,
         privy_app_id: Optional[str] = None,
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
@@ -66,7 +63,6 @@ class FlashProvider(TronProvider):
     ) -> "FlashProvider":
         """Factory: create and init a FlashProvider in one step."""
         provider = cls(
-            rpc_url=rpc_url,
             privy_app_id=privy_app_id,
             privy_app_secret=privy_app_secret,
             wallet_id=wallet_id,

@@ -3,6 +3,8 @@ import { TronWeb } from 'tronweb';
 
 export interface FlashProviderOptions extends TronProviderOptions {
   flashNode?: string;
+  /** Optional full node override for FlashProvider only */
+  fullNode?: string;
   privyAppId?: string;
   privyAppSecret?: string;
   walletId?: string;
@@ -36,8 +38,8 @@ export class FlashProvider extends TronProvider {
       this.address = this.walletId;
     }
 
-    const flashNode = opts.flashNode || process.env.TRON_FLASH_RPC_URL || opts.fullNode || process.env.TRON_RPC_URL || 'https://api.trongrid.io';
-    const fullNode = opts.fullNode || process.env.TRON_RPC_URL || 'https://api.trongrid.io';
+    const flashNode = opts.flashNode || process.env.TRON_FLASH_RPC_URL || opts.fullNode || 'https://api.trongrid.io';
+    const fullNode = opts.fullNode || 'https://api.trongrid.io';
 
     if (flashNode !== fullNode) {
       const ksPrivateKey =

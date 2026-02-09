@@ -1,4 +1,3 @@
-from os import getenv
 from typing import Optional, Any
 from tronpy import AsyncTron
 from tronpy.keys import PrivateKey
@@ -10,13 +9,12 @@ from wallet.types import AccountInfo, SignedTxResult
 
 load_dotenv()
 
+DEFAULT_TRON_RPC_URL = "https://api.trongrid.io"
+
 
 class TronProvider(BaseProvider):
     def __init__(
         self,
-        rpc_url: Optional[str] = None,
-        # Backward-compatible alias; prefer `rpc_url`.
-        trongrid_rpc_url: Optional[str] = None,
         private_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore=None,
@@ -27,7 +25,8 @@ class TronProvider(BaseProvider):
             keystore=keystore,
         )
 
-        self._rpc_url = rpc_url or trongrid_rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
+        # RPC URL is fixed for TronProvider (not configurable).
+        self._rpc_url = DEFAULT_TRON_RPC_URL
         # private_key comes from keystore (or explicit args), not from env.
         self._private_key_hex: Optional[str] = private_key
         self._key: Optional[PrivateKey] = None
@@ -68,14 +67,12 @@ class TronProvider(BaseProvider):
     @classmethod
     async def create(
         cls,
-        rpc_url: Optional[str] = None,
         private_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore=None,
     ) -> "TronProvider":
         """Factory: create and init a TronProvider in one step."""
         provider = cls(
-            rpc_url=rpc_url,
             private_key=private_key,
             keystore_path=keystore_path,
             keystore=keystore,

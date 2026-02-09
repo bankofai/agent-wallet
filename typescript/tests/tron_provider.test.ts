@@ -60,9 +60,6 @@ describe("TronProvider", () => {
     await Keystore.toFile(ksPath, { privateKey: "privatekey" });
 
     provider = new TronProvider({
-      fullNode: "http://fullnode",
-      solidityNode: "http://solidity",
-      eventServer: "http://event",
       keystore: { filePath: ksPath },
     });
   });
@@ -82,9 +79,6 @@ describe("TronProvider", () => {
     const fp = path.join(d, "Keystore");
     await Keystore.toFile(fp, { privateKey: "privatekey" });
     new TronProvider({
-      fullNode: "http://fullnode",
-      solidityNode: "http://solidity",
-      eventServer: "http://event",
       keystore: { filePath: fp },
     });
     expect(TronWeb).toHaveBeenCalledWith(expect.not.objectContaining({ headers: expect.anything() }));

@@ -31,7 +31,6 @@ signed_tx = result["signed_tx"]
 
 ```python
 flash = FlashProvider(
-    rpc_url=os.getenv("TRON_RPC_URL"),
     # Optionally override values that might also live in the keystore:
     privy_app_id=os.getenv("PRIVY_APP_ID"),
     privy_app_secret=os.getenv("PRIVY_APP_SECRET"),

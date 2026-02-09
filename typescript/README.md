@@ -14,14 +14,14 @@
 Create the keystore file and write credentials using the keystore CLI (recommended):
 
 ```bash
-npm run keystore -- init
-npm run keystore -- write privateKey "hex..."
+npx -p @bankofai/agent-wallet agent-wallet-keystore init
+npx -p @bankofai/agent-wallet agent-wallet-keystore write privateKey "hex..."
 ```
 
 ### Provider usage
 
 ```ts
-import { TronProvider } from './src/wallet';
+import { TronProvider } from '@bankofai/agent-wallet';
 
 // Keystore file initialization is done via CLI.
 // Providers read keystore data in the constructor.
