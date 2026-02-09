@@ -1,14 +1,14 @@
 # Agent Wallet SDK (Python)
 
-与 TypeScript 版逻辑对齐：Provider 抽象、Keystore、CLI、加密。
+Aligned with the TypeScript SDK: Provider abstraction, Keystore, CLI, and encryption.
 
-## Provider 抽象
+## Provider abstraction
 
-- **BaseProvider**：抽象基类，统一接口：
-  - `get_account_info() -> AccountInfo` — 返回 `{"address": str}`（钱包地址）
-  - `sign_tx(unsigned_tx) -> SignedTxResult` — 接受未签名交易，完成签名并返回 `{"signed_tx", "signature?"}`
-- **TronProvider**：继承 BaseProvider，基于 tronpy，本地私钥签名。
-- **FlashProvider**：继承 TronProvider，支持 Privy 远程签名与 Flash 节点。
+- **BaseProvider**: Abstract base class with a unified interface:
+  - `get_account_info() -> AccountInfo` — returns `{"address": str}` (wallet address)
+  - `sign_tx(unsigned_tx) -> SignedTxResult` — accepts an unsigned transaction, signs it, and returns `{"signed_tx", "signature?"}`
+- **TronProvider**: Extends BaseProvider; uses tronpy with local private-key signing.
+- **FlashProvider**: Extends TronProvider; supports Privy remote signing and Flash node.
 
 ```python
 from wallet import TronProvider, FlashProvider
@@ -21,10 +21,10 @@ signed_tx = result["signed_tx"]
 
 ## Keystore
 
-固定路径的 JSON 文件存储账户信息（私钥、apiKey、secretKey 等），支持读写与可选加密。
+A fixed-path JSON file stores account info (privateKey, apiKey, secretKey, etc.) with optional encryption. Payload format is compatible with the TypeScript keystore.
 
-- **路径**：默认 `./.keystore.json`，可通过 `KEYSTORE_PATH` 或构造参数 `file_path` 指定。
-- **加密**：若提供 `password` 或 `KEYSTORE_PASSWORD`，文件以 AES-256-GCM（scrypt 派生密钥）加密存储，与 TypeScript 版 payload 兼容。
+- **Path**: Default `./.keystore.json`; override via `KEYSTORE_PATH` or the `file_path` argument.
+- **Encryption**: If `password` or `KEYSTORE_PASSWORD` is set, the file is encrypted with AES-256-GCM (key derived via scrypt).
 
 ```python
 from keystore import Keystore
@@ -35,35 +35,35 @@ private_key = ks.get("privateKey")
 ks.set("apiKey", "xxx")
 ks.write()
 
-# 静态方法
+# Static methods
 data = Keystore.from_file("./.keystore.json", "secret")
 Keystore.to_file("./out.json", {"privateKey": "abc"}, "secret")
 ```
 
-## Keystore 命令行
+## Keystore CLI
 
 ```bash
-# 在 python 目录下
+# From the python directory
 uv run python -m keystore_cli read [key]
 uv run python -m keystore_cli write <key> <value>
 uv run python -m keystore_cli delete <key>
 uv run python -m keystore_cli init
 
-# 安装后可直接
+# After install, run directly
 keystore read
 keystore write privateKey "hex..."
 
-# 可选
+# Optional
 --path ./my.json
---password xxx  或  KEYSTORE_PASSWORD=xxx
+--password xxx  or  KEYSTORE_PASSWORD=xxx
 ```
 
-## 加密说明
+## Encryption
 
-- 未设置密码时，keystore 为明文 JSON。
-- 设置密码后，写入为 `{ version, salt, iv, tag, data }` 的加密 payload（scrypt + AES-256-GCM），与 TypeScript 版可互相读写。
+- Without a password, the keystore file is plain JSON.
+- With a password, the file is stored as an encrypted payload `{ version, salt, iv, tag, data }` (scrypt + AES-256-GCM); you can read and write the same file from both TypeScript and Python.
 
-## 测试
+## Tests
 
 ```bash
 uv run pytest
