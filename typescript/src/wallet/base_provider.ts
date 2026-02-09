@@ -32,7 +32,7 @@ export abstract class BaseProvider {
 
   /**
    * Load credentials from keystore. Subclasses override to populate
-   * chain-specific fields (privateKey, apiKey, etc.) from keystore data.
+   * chain-specific fields (privateKey, etc.) from keystore data.
    * Must be called after construction (constructors cannot be async).
    */
   async init(): Promise<this> {

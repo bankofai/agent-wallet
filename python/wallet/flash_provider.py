@@ -11,29 +11,24 @@ class FlashProvider(TronProvider):
     def __init__(
         self,
         rpc_url: Optional[str] = None,
-        api_key: Optional[str] = None,
         privy_app_id: Optional[str] = None,
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore=None,
     ):
-        """
-        Initialize FlashProvider with Privy integration.
-        After construction, call `await init()` to load credentials from keystore.
-        Or use `await FlashProvider.create(...)` for one-step setup.
-        """
+        """Initialize FlashProvider with Privy integration (credentials are read from keystore in constructor)."""
         super().__init__(
             rpc_url=rpc_url,
-            api_key=api_key,
             private_key=None,
             keystore_path=keystore_path,
             keystore=keystore,
         )
 
-        self.privy_app_id = privy_app_id or os.getenv("PRIVY_APP_ID")
-        self.privy_app_secret = privy_app_secret or os.getenv("PRIVY_APP_SECRET")
-        self.wallet_id = wallet_id or os.getenv("PRIVY_WALLET_ID")
+        # privy_app_id/privy_app_secret/wallet_id come from keystore (or explicit args), not from env.
+        self.privy_app_id = privy_app_id
+        self.privy_app_secret = privy_app_secret
+        self.wallet_id = wallet_id
 
         # Load missing Privy credentials from keystore (already read by BaseProvider).
         # Keystore keys: privyAppId, privyAppSecret, walletId
@@ -63,7 +58,6 @@ class FlashProvider(TronProvider):
     async def create(
         cls,
         rpc_url: Optional[str] = None,
-        api_key: Optional[str] = None,
         privy_app_id: Optional[str] = None,
         privy_app_secret: Optional[str] = None,
         wallet_id: Optional[str] = None,
@@ -73,7 +67,6 @@ class FlashProvider(TronProvider):
         """Factory: create and init a FlashProvider in one step."""
         provider = cls(
             rpc_url=rpc_url,
-            api_key=api_key,
             privy_app_id=privy_app_id,
             privy_app_secret=privy_app_secret,
             wallet_id=wallet_id,

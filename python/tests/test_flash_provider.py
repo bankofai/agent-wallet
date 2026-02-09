@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 from wallet.flash_provider import FlashProvider
+from keystore.keystore import Keystore
+import os
+import tempfile
 
 @pytest.fixture
 def mock_tron_client(mocker):
@@ -10,19 +13,34 @@ def mock_tron_client(mocker):
 
 @pytest.fixture
 def provider(mock_tron_client):
-    with pytest.MonkeyPatch.context() as m:
-        m.setattr("wallet.tron_provider.AsyncHTTPProvider", MagicMock())
-        # FlashProvider extends TronProvider
-        p = FlashProvider(
-            rpc_url="http://mock",
-            privy_app_id="mock_id",
-            privy_app_secret="mock_secret",
-            wallet_id="T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
-        )
-        p.client = mock_tron_client
-        p.flash_client = mock_tron_client # Use same mock for simplicity
-        p.address = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
-        return p
+    d = tempfile.mkdtemp(prefix="flash-provider-ks-")
+    try:
+        with pytest.MonkeyPatch.context() as m:
+            m.setattr("wallet.tron_provider.AsyncHTTPProvider", MagicMock())
+            # FlashProvider extends TronProvider
+            fp = os.path.join(d, "Keystore")
+            Keystore.to_file(
+                fp,
+                {
+                    "privyAppId": "mock_id",
+                    "privyAppSecret": "mock_secret",
+                    "walletId": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
+                },
+            )
+            p = FlashProvider(
+                rpc_url="http://mock",
+                keystore_path=fp,
+            )
+            p.client = mock_tron_client
+            p.flash_client = mock_tron_client  # Use same mock for simplicity
+            p.address = "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb"
+            yield p
+    finally:
+        try:
+            import shutil
+            shutil.rmtree(d, ignore_errors=True)
+        except Exception:
+            pass
 
 @pytest.mark.asyncio
 async def test_sign_transaction_privy(provider):

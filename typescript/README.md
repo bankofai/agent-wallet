@@ -16,7 +16,6 @@ Create the keystore file and write credentials using the keystore CLI (recommend
 ```bash
 npm run keystore -- init
 npm run keystore -- write privateKey "hex..."
-npm run keystore -- write apiKey "tron-grid-api-key"
 ```
 
 ### Provider usage
@@ -27,8 +26,8 @@ import { TronProvider } from './src/wallet';
 // Keystore file initialization is done via CLI.
 // Providers read keystore data in the constructor.
 const tron = new TronProvider({
-  privateKey: process.env.TRON_PRIVATE_KEY, // optional, overrides keystore/env
-  apiKey: process.env.TRON_GRID_API_KEY,   // optional
+  // Optional overrides. Recommended: write these into keystore via CLI.
+  // privateKey: 'hex...',
 });
 
 const info = await tron.getAccountInfo(); // { address: 'T...' }
@@ -38,8 +37,8 @@ const signed = await tron.signTx(unsignedTx);
 ### Sign an arbitrary message
 
 ```ts
-const res = await tron.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') });
-console.log(res.signature);
+const sig = await tron.signMessage(Buffer.from('hello', 'utf8'));
+console.log(sig);
 ```
 
 ## Keystore

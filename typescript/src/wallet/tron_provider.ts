@@ -11,21 +11,14 @@ export interface TronProviderOptions {
   solidityNode?: string;
   eventServer?: string;
   privateKey?: string;
-  apiKey?: string;
   /** Keystore options or a custom keystore implementation. */
   keystore?: KeystoreOptions | KeystoreBase;
-}
-
-export interface MessageSignRequest {
-  type: "message";
-  message: Uint8Array;
 }
 
 export class TronProvider extends BaseProvider {
   protected tronWeb: any;
   protected address: string | null = null;
   private _privateKey: string;
-  private _apiKey: string;
   private _fullNode: string;
   private _solidityNode: string;
   private _eventServer: string;
@@ -46,8 +39,8 @@ export class TronProvider extends BaseProvider {
       "https://api.trongrid.io";
     this._eventServer =
       opts.eventServer || process.env.TRON_RPC_URL || "https://api.trongrid.io";
-    this._privateKey = opts.privateKey || process.env.TRON_PRIVATE_KEY || "";
-    this._apiKey = opts.apiKey || process.env.TRON_GRID_API_KEY || "";
+    // privateKey comes from keystore (or explicit opts), not from env.
+    this._privateKey = opts.privateKey || "";
 
     // Load missing credentials from keystore in constructor (best-effort).
     // Works synchronously for the default file-based keystore.
@@ -55,20 +48,8 @@ export class TronProvider extends BaseProvider {
       const ksPrivateKey = (this.keystore as any).getSync("privateKey") as
         | string
         | undefined;
-      const ksApiKey = (this.keystore as any).getSync("apiKey") as
-        | string
-        | undefined;
-      const ksRpcUrl = (this.keystore as any).getSync("rpcUrl") as
-        | string
-        | undefined;
 
       if (!this._privateKey && ksPrivateKey) this._privateKey = ksPrivateKey;
-      if (!this._apiKey && ksApiKey) this._apiKey = ksApiKey;
-      if (ksRpcUrl && ksRpcUrl !== this._fullNode) {
-        this._fullNode = ksRpcUrl;
-        this._solidityNode = ksRpcUrl;
-        this._eventServer = ksRpcUrl;
-      }
     }
 
     this._buildTronWeb();
@@ -83,10 +64,6 @@ export class TronProvider extends BaseProvider {
       privateKey: this._privateKey || undefined,
     };
 
-    if (this._apiKey) {
-      options.headers = { "TRON-PRO-API-KEY": this._apiKey };
-    }
-
     this.tronWeb = new TronWeb(options);
 
     if (this._privateKey) {
@@ -95,8 +72,7 @@ export class TronProvider extends BaseProvider {
   }
 
   /**
-   * Load credentials from keystore, then rebuild TronWeb if new values found.
-   * Keystore keys used: privateKey, apiKey, rpcUrl
+   * Compatibility no-op.
    */
   async init(): Promise<this> {
     // Compatibility: constructor already loads credentials from keystore when possible.
@@ -121,15 +97,6 @@ export class TronProvider extends BaseProvider {
   }
 
   async signTx(unsignedTx: unknown): Promise<SignedTxResult> {
-    // Message-signing mode (non-transaction payload)
-    if (this.isMessageSignRequest(unsignedTx)) {
-      const signature = await this.signMessage(unsignedTx.message);
-      return {
-        signedTx: { type: "message", message: unsignedTx.message },
-        signature,
-      };
-    }
-
     const signed = await this.sign(unsignedTx as any);
     const sig = (signed as any)?.signature?.[0];
     return {
@@ -157,12 +124,6 @@ export class TronProvider extends BaseProvider {
       throw new Error("Message signing failed: empty signature");
     }
     return sig;
-  }
-
-  protected isMessageSignRequest(v: unknown): v is MessageSignRequest {
-    if (!v || typeof v !== "object") return false;
-    const anyV = v as any;
-    return anyV.type === "message" && anyV.message instanceof Uint8Array;
   }
 
   async getBalance(address?: string): Promise<number> {

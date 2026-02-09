@@ -1,6 +1,10 @@
 import { FlashProvider } from "../src/wallet/flash_provider";
 import { TronWeb } from "tronweb";
 import fetchMock from "jest-fetch-mock";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { Keystore } from "../src/keystore";
 
 jest.setMock("node-fetch", fetchMock);
 fetchMock.enableMocks();
@@ -12,8 +16,10 @@ describe("FlashProvider", () => {
   let mockSign: jest.Mock;
   let mockSendRawTransaction: jest.Mock;
   let mockSendTrx: jest.Mock;
+  let tmpDir: string;
+  let ksPath: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     fetchMock.resetMocks();
     jest.clearAllMocks();
     mockSign = jest.fn();
@@ -35,13 +41,23 @@ describe("FlashProvider", () => {
       };
     });
 
-    provider = new FlashProvider({
-      fullNode: "http://fullnode",
-      flashNode: "http://fullnode",
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "flash-provider-test-"));
+    ksPath = path.join(tmpDir, "Keystore");
+    await Keystore.toFile(ksPath, {
       privyAppId: "privy_app_id",
       privyAppSecret: "privy_app_secret",
       walletId: "privy_wallet_id",
     });
+
+    provider = new FlashProvider({
+      fullNode: "http://fullnode",
+      flashNode: "http://fullnode",
+      keystore: { filePath: ksPath },
+    });
+  });
+
+  afterEach(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it("should sign transaction with Privy", async () => {

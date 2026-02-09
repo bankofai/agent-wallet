@@ -26,7 +26,6 @@ async function main(): Promise<void> {
 
   const provider = new TronProvider({
     privateKey: process.env.TRON_PRIVATE_KEY,
-    apiKey: process.env.TRON_GRID_API_KEY,
   });
   await provider.init();
 

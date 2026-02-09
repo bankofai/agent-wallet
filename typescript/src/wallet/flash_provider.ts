@@ -17,9 +17,10 @@ export class FlashProvider extends TronProvider {
   constructor(opts: FlashProviderOptions = {}) {
     super(opts);
 
-    this.privyAppId = opts.privyAppId || process.env.PRIVY_APP_ID || '';
-    this.privyAppSecret = opts.privyAppSecret || process.env.PRIVY_APP_SECRET || '';
-    this.walletId = opts.walletId || process.env.PRIVY_WALLET_ID || '';
+    // privyAppId/privyAppSecret/walletId come from keystore (or explicit opts), not from env.
+    this.privyAppId = opts.privyAppId || '';
+    this.privyAppSecret = opts.privyAppSecret || '';
+    this.walletId = opts.walletId || '';
 
     // Load missing Privy credentials from keystore in constructor (best-effort).
     if (typeof (this.keystore as any).getSync === 'function') {
@@ -39,14 +40,14 @@ export class FlashProvider extends TronProvider {
     const fullNode = opts.fullNode || process.env.TRON_RPC_URL || 'https://api.trongrid.io';
 
     if (flashNode !== fullNode) {
+      const ksPrivateKey =
+        typeof (this.keystore as any).getSync === 'function'
+          ? ((this.keystore as any).getSync('privateKey') as string | undefined)
+          : undefined;
       const tronOpts: any = {
         fullHost: flashNode,
-        privateKey: opts.privateKey || process.env.TRON_PRIVATE_KEY || undefined
+        privateKey: opts.privateKey || ksPrivateKey || undefined,
       };
-      const apiKey = opts.apiKey || process.env.TRON_GRID_API_KEY || '';
-      if (apiKey) {
-        tronOpts.headers = { "TRON-PRO-API-KEY": apiKey };
-      }
       this.flashTronWeb = new TronWeb(tronOpts);
     } else {
       this.flashTronWeb = this.tronWeb;

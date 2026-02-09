@@ -17,8 +17,8 @@ from wallet import TronProvider, FlashProvider
 # Keystore file initialization is done via the keystore CLI.
 # Providers read keystore data in the constructor.
 tron = TronProvider(
-    private_key=os.getenv("TRON_PRIVATE_KEY"),   # optional, overrides keystore/env
-    api_key=os.getenv("TRON_GRID_API_KEY"),      # optional
+    # Optional overrides. Recommended: write these into keystore via CLI.
+    private_key=os.getenv("TRON_PRIVATE_KEY"),
     keystore_path=os.getenv("KEYSTORE_PATH"),    # optional custom path
 )
 
@@ -41,7 +41,7 @@ flash = FlashProvider(
 
 ## Keystore
 
-A fixed-path Protobuf file stores account info (privateKey, apiKey, secretKey, etc.).
+A fixed-path Protobuf file stores account info (privateKey, secretKey, etc.).
 
 - **Path**: Default `~/.agent_wallet/Keystore`; override via `KEYSTORE_PATH` env var or the `file_path` argument.
 - **Storage format**: Protobuf wire format (`map<string, string>`), NOT JSON.
@@ -54,7 +54,7 @@ from keystore import Keystore
 ks = Keystore()  # defaults to ~/.agent_wallet/Keystore
 ks.read()
 private_key = ks.get("privateKey")
-ks.set("apiKey", "xxx")  # loads existing data first if not yet loaded
+ks.set("note", "xxx")  # loads existing data first if not yet loaded
 ks.write()
 
 # Static helpers

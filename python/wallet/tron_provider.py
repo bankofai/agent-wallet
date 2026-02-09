@@ -18,49 +18,34 @@ class TronProvider(BaseProvider):
         # Backward-compatible alias; prefer `rpc_url`.
         trongrid_rpc_url: Optional[str] = None,
         private_key: Optional[str] = None,
-        api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore=None,
     ):
-        """
-        Initialize the TronProvider.
-        After construction, call `await init()` to load credentials from keystore.
-        Or use `await TronProvider.create(...)` for one-step setup.
-        """
+        """Initialize the TronProvider (credentials are read from keystore in constructor)."""
         super().__init__(
             keystore_path=keystore_path,
             keystore=keystore,
         )
 
         self._rpc_url = rpc_url or trongrid_rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
-        self._private_key_hex: Optional[str] = private_key or getenv("TRON_PRIVATE_KEY")
-        self._api_key: Optional[str] = api_key or getenv("TRON_GRID_API_KEY")
+        # private_key comes from keystore (or explicit args), not from env.
+        self._private_key_hex: Optional[str] = private_key
         self._key: Optional[PrivateKey] = None
         self.address: Optional[str] = None
         self.client: Optional[AsyncTron] = None
 
         # Load missing credentials from keystore (already read by BaseProvider).
-        # Keystore keys used: privateKey, apiKey, rpcUrl
+        # Keystore keys used: privateKey
         ks_private_key = self.keystore.get("privateKey")
-        ks_api_key = self.keystore.get("apiKey")
-        ks_rpc_url = self.keystore.get("rpcUrl")
 
         if not self._private_key_hex and ks_private_key:
             self._private_key_hex = ks_private_key
-        if not self._api_key and ks_api_key:
-            self._api_key = ks_api_key
-        if ks_rpc_url and ks_rpc_url != self._rpc_url:
-            self._rpc_url = ks_rpc_url
 
         self._build_client()
 
     def _build_client(self) -> None:
         """Build / rebuild the Tron client from current credentials."""
-        if self._api_key:
-            provider = AsyncHTTPProvider(self._rpc_url, api_key=self._api_key)
-        else:
-            provider = AsyncHTTPProvider(self._rpc_url)
-
+        provider = AsyncHTTPProvider(self._rpc_url)
         self.client = AsyncTron(provider=provider)
 
         if self._private_key_hex:
@@ -85,7 +70,6 @@ class TronProvider(BaseProvider):
         cls,
         rpc_url: Optional[str] = None,
         private_key: Optional[str] = None,
-        api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore=None,
     ) -> "TronProvider":
@@ -93,7 +77,6 @@ class TronProvider(BaseProvider):
         provider = cls(
             rpc_url=rpc_url,
             private_key=private_key,
-            api_key=api_key,
             keystore_path=keystore_path,
             keystore=keystore,
         )
@@ -108,18 +91,6 @@ class TronProvider(BaseProvider):
 
     async def sign_tx(self, unsigned_tx: Any) -> SignedTxResult:
         """Sign unsigned transaction and return signed result. BaseProvider compatibility."""
-        # Message-signing mode (non-transaction payload)
-        if (
-            isinstance(unsigned_tx, dict)
-            and unsigned_tx.get("type") == "message"
-            and isinstance(unsigned_tx.get("message"), (bytes, bytearray))
-        ):
-            signature = await self.sign_message(bytes(unsigned_tx["message"]))
-            return {
-                "signed_tx": {"type": "message", "message": bytes(unsigned_tx["message"])},
-                "signature": signature,
-            }
-
         signed = await self.sign_transaction(unsigned_tx)
         sig = getattr(signed, "_signature", None) or getattr(signed, "signature", None)
         if isinstance(sig, list) and len(sig) > 0:

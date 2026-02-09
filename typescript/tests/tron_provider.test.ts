@@ -1,5 +1,9 @@
 import { TronProvider } from "../src/wallet/tron_provider";
 import { TronWeb } from "tronweb";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { Keystore } from "../src/keystore";
 
 // Mock TronWeb class
 jest.mock("tronweb");
@@ -13,8 +17,10 @@ describe("TronProvider", () => {
   let mockContract: jest.Mock;
   let mockFromPrivateKey: jest.Mock;
   let mockSendTrx: jest.Mock;
+  let tmpDir: string;
+  let ksPath: string;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
 
     mockGetBalance = jest.fn();
@@ -49,12 +55,20 @@ describe("TronProvider", () => {
     mockFromPrivateKey.mockReturnValue("T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb");
     mockSendTrx.mockResolvedValue({});
 
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "tron-provider-test-"));
+    ksPath = path.join(tmpDir, "Keystore");
+    await Keystore.toFile(ksPath, { privateKey: "privatekey" });
+
     provider = new TronProvider({
       fullNode: "http://fullnode",
       solidityNode: "http://solidity",
       eventServer: "http://event",
-      privateKey: "privatekey",
+      keystore: { filePath: ksPath },
     });
+  });
+
+  afterEach(() => {
+    if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
   it("should initialize correctly", () => {
@@ -62,20 +76,19 @@ describe("TronProvider", () => {
     expect(mockFromPrivateKey).toHaveBeenCalledWith("privatekey");
   });
 
-  it("should initialize with API key", () => {
+  it("should initialize with API key from keystore", async () => {
     jest.clearAllMocks();
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "tron-provider-test-ak-"));
+    const fp = path.join(d, "Keystore");
+    await Keystore.toFile(fp, { privateKey: "privatekey" });
     new TronProvider({
       fullNode: "http://fullnode",
       solidityNode: "http://solidity",
       eventServer: "http://event",
-      privateKey: "privatekey",
-      apiKey: "my-api-key",
+      keystore: { filePath: fp },
     });
-    expect(TronWeb).toHaveBeenCalledWith(
-      expect.objectContaining({
-        headers: { "TRON-PRO-API-KEY": "my-api-key" },
-      }),
-    );
+    expect(TronWeb).toHaveBeenCalledWith(expect.not.objectContaining({ headers: expect.anything() }));
+    fs.rmSync(d, { recursive: true, force: true });
   });
 
   it("should get balance", async () => {
@@ -137,13 +150,5 @@ describe("TronProvider", () => {
     mockSignMessageV2.mockReturnValue("msg-sig");
     const sig = await provider.signMessage(Buffer.from("hello", "utf8"));
     expect(sig).toBe("msg-sig");
-  });
-
-  it("should signTx sign a message and return signature", async () => {
-    mockSignMessageV2.mockReturnValue("msg-sig");
-    const msg = Buffer.from("hello", "utf8");
-    const result = await provider.signTx({ type: "message", message: msg });
-    expect(result.signature).toBe("msg-sig");
-    expect((result.signedTx as any).type).toBe("message");
   });
 });

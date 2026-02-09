@@ -41,7 +41,6 @@ async def main() -> int:
 
     provider = TronProvider(
         private_key=os.getenv("TRON_PRIVATE_KEY"),
-        api_key=os.getenv("TRON_GRID_API_KEY"),
         keystore_path=os.getenv("KEYSTORE_PATH"),
     )
     await provider.init()

@@ -48,8 +48,6 @@ async def main() -> int:
     print("[keystore] path:", ks.get_path())
     ks.read()
     ks.set("privateKey", "11" * 32)  # demo-only key, do not use in production
-    ks.set("apiKey", "demo-api-key")
-    ks.set("rpcUrl", "http://localhost:9999")
     ks.write()
     print("[keystore] keys:", sorted(ks.keys()))
     print("[keystore] privateKey len:", len(ks.get("privateKey") or ""))
@@ -62,7 +60,7 @@ async def main() -> int:
     tron = LocalTronProvider(keystore_path=tmp_path)
     await tron.init()
     print("[tron] account:", await tron.get_account_info())
-    print("[tron] sign_tx(message):", await tron.sign_tx({"type": "message", "message": b"hello"}))
+    print("[tron] sign_message:", await tron.sign_message(b"hello"))
     # stub transaction object
     class Tx:
         txid = "tx-demo"
@@ -82,7 +80,7 @@ async def main() -> int:
         wallet_id=None,
     )
     await flash.init()
-    print("[flash] sign_tx(message):", await flash.sign_tx({"type": "message", "message": b"hello"}))
+    print("[flash] sign_message:", await flash.sign_message(b"hello"))
     print("[flash] send_transaction:", await flash.send_transaction("recipient", 2.0))
 
     return 0

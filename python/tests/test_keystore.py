@@ -41,7 +41,6 @@ class TestKeystoreProto:
     def test_roundtrip_multiple_entries(self):
         data = {
             "privateKey": "deadbeef",
-            "apiKey": "my-api-key",
             "secretKey": "super-secret",
             "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb",
         }
@@ -76,7 +75,6 @@ class TestKeystoreUnencrypted:
         ks = Keystore(file_path=fp)
         ks.read()
         ks.set("privateKey", "abc")
-        ks.set("apiKey", "xyz")
         ks.write()
 
         # File should be binary protobuf, not JSON
@@ -87,7 +85,7 @@ class TestKeystoreUnencrypted:
         # Read back with a fresh instance
         ks2 = Keystore(file_path=fp)
         data = ks2.read()
-        assert data == {"privateKey": "abc", "apiKey": "xyz"}
+        assert data == {"privateKey": "abc"}
 
     def test_set_without_read_preserves_existing(self, tmp_dir):
         fp = tmp_file(tmp_dir, "ks-preserve")

@@ -59,8 +59,6 @@ async function main(): Promise<void> {
 
   await ks.read();
   await ks.set('privateKey', '11'.repeat(32)); // demo-only key, do not use in production
-  await ks.set('apiKey', 'demo-api-key');
-  await ks.set('rpcUrl', 'http://localhost:9999');
   await ks.write();
 
   console.log('[keystore] keys:', await ks.keys());
@@ -76,7 +74,7 @@ async function main(): Promise<void> {
   await tron.init();
 
   console.log('[tron] account:', await tron.getAccountInfo());
-  console.log('[tron] signTx(message):', await tron.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') }));
+  console.log('[tron] signMessage:', await tron.signMessage(Buffer.from('hello', 'utf8')));
   console.log('[tron] signTx(tx):', await tron.signTx({ txID: 'tx-demo' }));
   console.log('[tron] sign(tx):', await tron.sign({ txID: 'tx-demo-2' }));
   console.log('[tron] balance:', await tron.getBalance());
@@ -87,7 +85,7 @@ async function main(): Promise<void> {
   // ===== FlashProvider (all methods, local stubs) =====
   const flash = new LocalFlashProvider({ keystore: { filePath: tmpKeystorePath } });
   await flash.init();
-  console.log('[flash] signTx(message):', await flash.signTx({ type: 'message', message: Buffer.from('hello', 'utf8') }));
+  console.log('[flash] signMessage:', await flash.signMessage(Buffer.from('hello', 'utf8')));
   console.log('[flash] sign(tx):', await flash.sign({ txID: 'flash-tx' }));
   console.log('[flash] sendTransaction:', await flash.sendTransaction('recipient', 2));
 }

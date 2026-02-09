@@ -79,7 +79,6 @@ describe('Keystore (unencrypted)', () => {
     const ks = new Keystore({ filePath: fp });
     await ks.read();
     await ks.set('privateKey', 'abc');
-    await ks.set('apiKey', 'xyz');
     await ks.write();
 
     // File should be binary protobuf, not JSON
@@ -89,7 +88,7 @@ describe('Keystore (unencrypted)', () => {
     // Read back with a fresh instance
     const ks2 = new Keystore({ filePath: fp });
     const data = await ks2.read();
-    expect(data).toEqual({ privateKey: 'abc', apiKey: 'xyz' });
+    expect(data).toEqual({ privateKey: 'abc' });
   });
 
   it('should preserve existing data when set() is called without prior read()', async () => {
