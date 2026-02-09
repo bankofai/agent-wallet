@@ -20,16 +20,39 @@ export interface KeystoreOptions {
 }
 
 /**
+ * Keystore base class (abstract).
+ * Providers should depend on this type, so you can inject alternative keystore
+ * implementations (memory/db/etc.) without changing provider logic.
+ */
+export abstract class KeystoreBase {
+  /** Get the path/identifier of the keystore (if applicable). */
+  abstract getPath(): string;
+  /** Read data from the underlying store. */
+  abstract read(): Promise<KeystoreData>;
+  /** Get a value by key. */
+  abstract get(key: string): Promise<string | undefined>;
+  /** Set a value by key (does not persist until write()). */
+  abstract set(key: string, value: string): Promise<void>;
+  /** List keys. */
+  abstract keys(): Promise<string[]>;
+  /** Get full data snapshot. */
+  abstract getAll(): Promise<KeystoreData>;
+  /** Persist current data to the underlying store. */
+  abstract write(): Promise<void>;
+}
+
+/**
  * Keystore: fixed-address JSON file storing account info (privateKey, apiKey, secretKey, etc.)
  * with optional password-based encryption.
  */
-export class Keystore {
+export class Keystore extends KeystoreBase {
   private filePath: string;
   private password: string | undefined;
   private data: KeystoreData = {};
   private loaded = false;
 
   constructor(options: KeystoreOptions = {}) {
+    super();
     this.filePath = options.filePath ?? process.env.KEYSTORE_PATH ?? DEFAULT_PATH;
     this.password = options.password ?? process.env.KEYSTORE_PASSWORD;
   }

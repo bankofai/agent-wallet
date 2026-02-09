@@ -5,18 +5,18 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from keystore.base import KeystoreBase, KeystoreData
 from keystore.keystore_crypto import decrypt, encrypt, is_encrypted_payload
 from keystore.keystore_proto import decode_keystore_data, encode_keystore_data
 
 DEFAULT_KEYSTORE_FILENAME = "Keystore"
-KeystoreData = dict[str, str]
 
 
 def _default_path() -> str:
     return str(Path.home() / ".agent_wallet" / DEFAULT_KEYSTORE_FILENAME)
 
 
-class Keystore:
+class Keystore(KeystoreBase):
     """
     Keystore: fixed-address JSON file storing account info with optional password-based encryption.
     """

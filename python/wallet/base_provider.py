@@ -7,6 +7,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from wallet.types import AccountInfo, SignedTxResult
+from keystore.base import KeystoreBase
 from keystore.keystore import Keystore
 
 
@@ -20,8 +21,12 @@ class BaseProvider(ABC):
         self,
         keystore_path: Optional[str] = None,
         keystore_password: Optional[str] = None,
+        keystore: Optional[KeystoreBase] = None,
     ):
-        self.keystore = Keystore(file_path=keystore_path, password=keystore_password)
+        # Allow injecting a custom keystore implementation.
+        self.keystore: KeystoreBase = keystore or Keystore(
+            file_path=keystore_path, password=keystore_password
+        )
 
     async def init(self) -> "BaseProvider":
         """Load credentials from keystore. Subclasses override to populate

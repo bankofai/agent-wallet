@@ -1,5 +1,5 @@
 import type { AccountInfo, SignedTxResult } from './types';
-import { Keystore, type KeystoreOptions } from '../keystore/keystore';
+import { Keystore, KeystoreBase, type KeystoreOptions } from '../keystore/keystore';
 
 /**
  * Abstract base provider: compatible getAccountInfo and signTx.
@@ -10,10 +10,15 @@ import { Keystore, type KeystoreOptions } from '../keystore/keystore';
  */
 export abstract class BaseProvider {
   /** Keystore instance for reading/writing account credentials. */
-  public keystore: Keystore;
+  public keystore: KeystoreBase;
 
-  constructor(keystoreOpts?: KeystoreOptions) {
-    this.keystore = new Keystore(keystoreOpts);
+  constructor(keystore?: KeystoreBase | KeystoreOptions) {
+    // Allow injecting a custom keystore implementation.
+    if (keystore && typeof (keystore as any).read === 'function' && typeof (keystore as any).write === 'function') {
+      this.keystore = keystore as KeystoreBase;
+    } else {
+      this.keystore = new Keystore(keystore as KeystoreOptions | undefined);
+    }
   }
 
   /**

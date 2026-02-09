@@ -19,13 +19,18 @@ class TronProvider(BaseProvider):
         api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore_password: Optional[str] = None,
+        keystore=None,
     ):
         """
         Initialize the TronProvider.
         After construction, call `await init()` to load credentials from keystore.
         Or use `await TronProvider.create(...)` for one-step setup.
         """
-        super().__init__(keystore_path=keystore_path, keystore_password=keystore_password)
+        super().__init__(
+            keystore_path=keystore_path,
+            keystore_password=keystore_password,
+            keystore=keystore,
+        )
 
         self._rpc_url = rpc_url or getenv("TRON_RPC_URL", "https://api.trongrid.io")
         self._private_key_hex: Optional[str] = private_key or getenv("TRON_PRIVATE_KEY")
@@ -91,6 +96,7 @@ class TronProvider(BaseProvider):
         api_key: Optional[str] = None,
         keystore_path: Optional[str] = None,
         keystore_password: Optional[str] = None,
+        keystore=None,
     ) -> "TronProvider":
         """Factory: create and init a TronProvider in one step."""
         provider = cls(
@@ -99,6 +105,7 @@ class TronProvider(BaseProvider):
             api_key=api_key,
             keystore_path=keystore_path,
             keystore_password=keystore_password,
+            keystore=keystore,
         )
         await provider.init()
         return provider

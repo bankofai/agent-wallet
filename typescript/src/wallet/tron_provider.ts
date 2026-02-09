@@ -2,7 +2,7 @@ import { TronWeb } from 'tronweb';
 import * as dotenv from 'dotenv';
 import { BaseProvider } from './base_provider';
 import type { AccountInfo, SignedTxResult } from './types';
-import type { KeystoreOptions } from '../keystore/keystore';
+import type { KeystoreOptions, KeystoreBase } from '../keystore/keystore';
 
 dotenv.config();
 
@@ -12,8 +12,8 @@ export interface TronProviderOptions {
     eventServer?: string;
     privateKey?: string;
     apiKey?: string;
-    /** Keystore options. If provided, credentials not passed above will be loaded from keystore. */
-    keystore?: KeystoreOptions;
+    /** Keystore options or a custom keystore implementation. */
+    keystore?: KeystoreOptions | KeystoreBase;
 }
 
 export class TronProvider extends BaseProvider {

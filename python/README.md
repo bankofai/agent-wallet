@@ -7,6 +7,7 @@ Aligned with the TypeScript SDK: Provider abstraction, Keystore, CLI, and encryp
 - **BaseProvider**: Abstract base class with a unified interface:
   - `get_account_info() -> AccountInfo` — returns `{"address": str}` (wallet address)
   - `sign_tx(unsigned_tx) -> SignedTxResult` — accepts an unsigned transaction, signs it, and returns `{"signed_tx", "signature?"}`
+- Providers depend on an abstract **KeystoreBase** type, so you can inject other keystore implementations if needed (default is the file-based `Keystore` at `~/.agent_wallet/Keystore`).
 - **TronProvider**: Extends BaseProvider; uses tronpy with local private-key signing.
 - **FlashProvider**: Extends TronProvider; supports Privy remote signing and Flash node.
 
