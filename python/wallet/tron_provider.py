@@ -137,7 +137,7 @@ class TronProvider(BaseProvider):
         """Sync helper for message signing."""
         if not self._key:
             raise ValueError("Private key not provided for signing")
-        sig = self._key.sign_msg(message)
+        sig = self._key.sign_msg_hash(message)
         return sig.hex()
 
     async def get_balance(self, address: Optional[str] = None) -> float:
