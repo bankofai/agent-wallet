@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from wallet.base_provider import BaseProvider
 from wallet.types import AccountInfo, SignedTxResult
+from common.logger import get_logger
 
 load_dotenv()
 
@@ -118,6 +119,19 @@ class TronProvider(BaseProvider):
 
     async def sign_tx(self, unsigned_tx: Any) -> SignedTxResult:
         """Sign unsigned transaction and return signed result. BaseProvider compatibility."""
+        # Message-signing mode (non-transaction payload)
+        if (
+            isinstance(unsigned_tx, dict)
+            and unsigned_tx.get("type") == "message"
+            and isinstance(unsigned_tx.get("message"), str)
+        ):
+            encoding = unsigned_tx.get("encoding") or "utf8"
+            signature = await self.sign_message(unsigned_tx["message"], encoding=encoding)
+            return {
+                "signed_tx": {"type": "message", "message": unsigned_tx["message"], "encoding": encoding},
+                "signature": signature,
+            }
+
         signed = await self.sign_transaction(unsigned_tx)
         sig = getattr(signed, "_signature", None) or getattr(signed, "signature", None)
         if isinstance(sig, list) and len(sig) > 0:
@@ -126,6 +140,28 @@ class TronProvider(BaseProvider):
         else:
             signature = None
         return {"signed_tx": signed, "signature": signature}
+
+    async def sign_message(self, message: str, encoding: str = "utf8") -> str:
+        """Sign an arbitrary message and return a raw signature hex string.
+
+        - encoding: "utf8" (default) or "hex" (message is hex string)
+        """
+        log = get_logger(__name__)
+        log.debug("tron provider: sign_message start encoding=%s len=%d", encoding, len(message))
+        sig_hex = self._sign_message(message, encoding=encoding)
+        log.debug("tron provider: sign_message ok")
+        return sig_hex
+
+    def _sign_message(self, message: str, encoding: str = "utf8") -> str:
+        """Sync helper for message signing."""
+        if not self._key:
+            raise ValueError("Private key not provided for signing")
+        if encoding == "hex":
+            msg_bytes = bytes.fromhex(message)
+        else:
+            msg_bytes = message.encode("utf-8")
+        sig = self._key.sign_msg(msg_bytes)
+        return sig.hex()
 
     async def get_balance(self, address: Optional[str] = None) -> float:
         """Get TRX balance of an address."""

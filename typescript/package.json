@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "test": "jest",
-    "keystore": "node -r ts-node/register src/cli/keystore_cli.ts"
+    "keystore": "node -r ts-node/register src/cli/keystore_cli.ts",
+    "example:sign-message": "node -r ts-node/register examples/sign_message.ts"
   },
   "keywords": [],
   "author": "",

@@ -85,3 +85,26 @@ async def test_sign_tx(provider):
     result = await provider.sign_tx(mock_txn)
     assert result["signed_tx"] is mock_signed
     assert result["signature"] == "sig-hex"
+
+
+@pytest.mark.asyncio
+async def test_sign_message(provider):
+    class _Sig:
+        def hex(self):
+            return "msg-sig-hex"
+
+    provider._key.sign_msg.return_value = _Sig()
+    sig = await provider.sign_message("hello", encoding="utf8")
+    assert sig == "msg-sig-hex"
+
+
+@pytest.mark.asyncio
+async def test_sign_tx_message(provider):
+    class _Sig:
+        def hex(self):
+            return "msg-sig-hex"
+
+    provider._key.sign_msg.return_value = _Sig()
+    result = await provider.sign_tx({"type": "message", "message": "hello", "encoding": "utf8"})
+    assert result["signature"] == "msg-sig-hex"
+    assert result["signed_tx"] == {"type": "message", "message": "hello", "encoding": "utf8"}

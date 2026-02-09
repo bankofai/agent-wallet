@@ -1,10 +1,14 @@
 """Keystore: fixed-path protobuf file for account info with optional encryption."""
+
+from __future__ import annotations
+
 import base64
 import json
 import os
 from pathlib import Path
 from typing import Optional
 
+from common.logger import get_logger
 from keystore.base import KeystoreBase, KeystoreData
 from keystore.keystore_crypto import decrypt, encrypt, is_encrypted_payload
 from keystore.keystore_proto import decode_keystore_data, encode_keystore_data
@@ -17,9 +21,7 @@ def _default_path() -> str:
 
 
 class Keystore(KeystoreBase):
-    """
-    Keystore: fixed-address JSON file storing account info with optional password-based encryption.
-    """
+    """File-based keystore (protobuf bytes; optionally encrypted JSON wrapper)."""
 
     def __init__(
         self,
@@ -35,10 +37,15 @@ class Keystore(KeystoreBase):
         return self.file_path
 
     def read(self) -> KeystoreData:
+        log = get_logger(__name__)
+        log.debug("keystore: read start path=%s", self.file_path)
+
         if not os.path.isfile(self.file_path):
             self._data = {}
             self._loaded = True
+            log.debug("keystore: file missing, returning empty path=%s", self.file_path)
             return self._data
+
         with open(self.file_path, "rb") as f:
             raw = f.read()
 
@@ -58,6 +65,7 @@ class Keystore(KeystoreBase):
                 raise ValueError(
                     "Keystore is encrypted but no password provided (KEYSTORE_PASSWORD or password=)"
                 )
+            log.debug("keystore: detected encrypted JSON payload path=%s", self.file_path)
             plain = decrypt(parsed, self.password)
             # Backwards compatibility: plaintext may be JSON or base64-encoded protobuf
             try:
@@ -71,11 +79,20 @@ class Keystore(KeystoreBase):
                 self._data = decode_keystore_data(buf)
         elif parsed_as_json and isinstance(parsed, dict):
             # Legacy unencrypted JSON format
+            log.debug("keystore: detected legacy JSON plaintext path=%s", self.file_path)
             self._data = parsed
         else:
             # New protobuf binary format
+            log.debug("keystore: detected protobuf binary path=%s", self.file_path)
             self._data = decode_keystore_data(raw)
+
         self._loaded = True
+        log.info(
+            "keystore: read ok path=%s keys=%d encrypted=%s",
+            self.file_path,
+            len(self._data),
+            bool(self.password),
+        )
         return self._data.copy()
 
     def _ensure_loaded(self) -> None:
@@ -101,8 +118,10 @@ class Keystore(KeystoreBase):
 
     def write(self) -> None:
         """Write current data to file. Atomic via tmp+rename."""
+        log = get_logger(__name__)
         Path(self.file_path).parent.mkdir(parents=True, exist_ok=True)
         tmp_path = self.file_path + ".tmp"
+
         proto_bytes = encode_keystore_data(self._data)
         if self.password:
             plaintext = base64.b64encode(proto_bytes).decode("ascii")
@@ -112,7 +131,14 @@ class Keystore(KeystoreBase):
         else:
             with open(tmp_path, "wb") as f:
                 f.write(proto_bytes)
+
         os.replace(tmp_path, self.file_path)
+        log.info(
+            "keystore: write ok path=%s keys=%d encrypted=%s",
+            self.file_path,
+            len(self._data),
+            bool(self.password),
+        )
 
     @staticmethod
     def from_file(file_path: str, password: Optional[str] = None) -> KeystoreData:
@@ -129,3 +155,4 @@ class Keystore(KeystoreBase):
         ks._data = dict(data)
         ks._loaded = True
         ks.write()
+

@@ -6,6 +6,8 @@ import httpx
 import os
 import json
 
+from common.logger import get_logger
+
 
 class FlashProvider(TronProvider):
     def __init__(
@@ -116,6 +118,41 @@ class FlashProvider(TronProvider):
             transaction._signature = [data["signature"]]
             return transaction
 
+    async def sign_message(self, message: str, encoding: str = "utf8") -> str:
+        """Sign an arbitrary message and return a raw signature string.
+
+        If Privy credentials are not configured, falls back to local signing
+        (same as TronProvider).
+        """
+        if not self.privy_app_id or not self.privy_app_secret or not self.wallet_id:
+            return await super().sign_message(message, encoding=encoding)
+
+        log = get_logger(__name__)
+        log.debug("flash provider: sign_message start encoding=%s len=%d", encoding, len(message))
+
+        if encoding == "hex":
+            msg_hex = message
+        else:
+            msg_hex = message.encode("utf-8").hex()
+
+        sign_url = f"https://auth.privy.io/api/v1/wallets/{self.wallet_id}/sign"
+        headers = {
+            "Authorization": f"Basic {self._get_basic_auth()}",
+            "Content-Type": "application/json",
+            "privy-app-id": self.privy_app_id,
+        }
+        payload = {"method": "raw_sign", "params": {"message": msg_hex, "encoding": "hex"}}
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(sign_url, json=payload, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            if "signature" not in data:
+                raise ValueError("Privy signing response did not contain a signature")
+            log.debug("flash provider: sign_message ok")
+            return data["signature"]
+
+    
     def _get_basic_auth(self) -> str:
         import base64
 
