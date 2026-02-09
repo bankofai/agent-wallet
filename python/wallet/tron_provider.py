@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 
 from wallet.base_provider import BaseProvider
 from wallet.types import AccountInfo, SignedTxResult
-from common.logger import get_logger
 
 load_dotenv()
 
@@ -148,11 +147,7 @@ class TronProvider(BaseProvider):
 
         - encoding: "utf8" (default) or "hex" (message is hex string)
         """
-        log = get_logger(__name__)
-        log.debug("tron provider: sign_message start encoding=%s len=%d", encoding, len(message))
-        sig_hex = self._sign_message(message, encoding=encoding)
-        log.debug("tron provider: sign_message ok")
-        return sig_hex
+        return self._sign_message(message, encoding=encoding)
 
     def _sign_message(self, message: str, encoding: str = "utf8") -> str:
         """Sync helper for message signing."""

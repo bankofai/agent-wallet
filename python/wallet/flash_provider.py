@@ -6,8 +6,6 @@ import httpx
 import os
 import json
 
-from common.logger import get_logger
-
 
 class FlashProvider(TronProvider):
     def __init__(
@@ -127,9 +125,6 @@ class FlashProvider(TronProvider):
         if not self.privy_app_id or not self.privy_app_secret or not self.wallet_id:
             return await super().sign_message(message, encoding=encoding)
 
-        log = get_logger(__name__)
-        log.debug("flash provider: sign_message start encoding=%s len=%d", encoding, len(message))
-
         if encoding == "hex":
             msg_hex = message
         else:
@@ -149,7 +144,6 @@ class FlashProvider(TronProvider):
             data = resp.json()
             if "signature" not in data:
                 raise ValueError("Privy signing response did not contain a signature")
-            log.debug("flash provider: sign_message ok")
             return data["signature"]
 
     

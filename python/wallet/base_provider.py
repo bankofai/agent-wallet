@@ -1,7 +1,7 @@
 """Abstract base provider: compatible get_account_info and sign_tx.
 
 Providers hold a keystore instance. Call `init()` to load credentials from
-keystore, or use the classmethod `create()` on concrete providers.
+keystore, or use a helper factory on concrete providers if provided.
 """
 
 from __future__ import annotations
@@ -9,7 +9,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
-from common.logger import get_logger
 from keystore.base import KeystoreBase
 from keystore.keystore import Keystore
 from wallet.types import AccountInfo, SignedTxResult
@@ -31,10 +30,7 @@ class BaseProvider(ABC):
 
     async def init(self) -> "BaseProvider":
         """Load keystore (constructors cannot be async)."""
-        log = get_logger(__name__)
-        log.debug("provider keystore init: reading keystore path=%s", self.keystore.get_path())
         self.keystore.read()
-        log.debug("provider keystore init: loaded path=%s", self.keystore.get_path())
         return self
 
     @abstractmethod
